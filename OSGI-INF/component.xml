@@ -6,8 +6,10 @@
    <reference bind="addedEnvironmentRESTApi" cardinality="1..1" interface="it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi" name="EnvironmentRESTApi" policy="static" unbind="removedEnvironmentRESTApi"/>
    <service>
       <provide interface="org.osgi.service.event.EventHandler"/>
+      <provide interface="org.osgi.service.cm.ManagedService"/>
    </service>
    <property name="event.topics" type="String" value="it/polito/elite/domotics/model/notification/*">
    </property>
+   <property name="service.pid" type="String" value="it.polito.elite.dog.communication.ws"/>
 	   
 </scr:component>

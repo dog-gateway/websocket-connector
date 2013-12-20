@@ -2,9 +2,12 @@ package it.polito.elite.dog.communication.ws;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+import it.polito.elite.dog.core.housemodel.api.EnvironmentModel;
+import it.polito.elite.dog.core.housemodel.api.HouseModel;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
+import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,13 +22,16 @@ import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.cm.ConfigurationException;
+import org.osgi.service.cm.ManagedService;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.osgi.service.log.LogService;
 
-public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
+public class WebsocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
 {
 	
 	// reference for the DeviceRESTApi
@@ -35,9 +41,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 	// reference for the WebsocketImplementation
 	private WebsocketImplementation websocketImplementation;
 	// list of users (by instances)
-	private List<WebsocketImplementation> users = new ArrayList<WebsocketImplementation>();
+	private List<WebsocketImplementation> users;
 	// list of notifications per users
-	private Map<String, ArrayList<String>> listOfNotificationsPerUser = new HashMap<>();
+	private Map<String, ArrayList<String>> listOfNotificationsPerUser;
+	
+	// the service registration handle
+	private ServiceRegistration<?> serviceRegManagedService;
 	
 	// the bundle context reference
 	private BundleContext context;
@@ -48,8 +57,11 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 	// the instance-level mapper
 	private ObjectMapper mapper;
 	
+	// path at which the server will be accessible
+	private String websocketPath;
+	
 	private static final long serialVersionUID = 1L;
-	HttpService http;
+	private HttpService http;
 	
 	public WebsocketEndPoint()
 	{
@@ -58,6 +70,16 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 		this.deviceRestApi = new AtomicReference<>();
 		// init the Environment Rest Api atomic reference
 		this.environmentRestApi = new AtomicReference<>();
+		
+		// init the list of notifications per users
+		this.listOfNotificationsPerUser = new HashMap<>();
+		
+		// init the list of users (by instances)
+		this.users = new ArrayList<WebsocketImplementation>();
+		
+		// init default value for the path at which the server will be
+		// accessible (it is the part that follow server.com:8080)
+		this.websocketPath = "/dogws";
 		
 	}
 	
@@ -209,23 +231,16 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 	
 	/*
 	 * (non-Javadoc)
-	 * @see org.eclipse.jetty.websocket.WebSocketFactory.Acceptor#doWebSocketConnect(javax.servlet.http.HttpServletRequest, java.lang.String)
+	 * 
+	 * @see
+	 * org.eclipse.jetty.websocket.WebSocketFactory.Acceptor#doWebSocketConnect
+	 * (javax.servlet.http.HttpServletRequest, java.lang.String)
 	 */
 	@Override
 	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
 	{
 		// Method used every time a user try to connect to the server
 		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
-		// System.out.println(req.getPathInfo()); //with this instruction we can
-		// obtain the part of the path that follows the part used to answer. If,
-		// for example, the server is accessible at the url localhost:8080/chat,
-		// and we insert the following path in the browser
-		// localhost:8080/chat/bye/path/path2?par=me we obtain "/bye/path/path2"
-		// System.out.println(req.getParameter("parameter_name")); //with this
-		// instruction we can obtain from the url the content of the parameter
-		// named "parameter_name" (the parameters accessible by this instuction
-		// have to be specified in the url (for example:
-		// localhost:8080/chat?nome_parametro=...&nome2=...)
 		
 		// create an instance of WebsocketImplementation
 		websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
@@ -251,36 +266,50 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 	 */
 	public void activate(BundleContext context)
 	{
+		// store the bundle context
+		this.context = context;
+		
+		// initialize the instance-wide object mapper
+		this.mapper = new ObjectMapper();
+		// set the mapper pretty printing
+		this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
+		// avoid empty arrays and null values
+		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
+		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
+		
+		// init the logger with a null logger
+		this.logger = new LogHelper(this.context);
+		
+		// log the activation
+		this.logger.log(LogService.LOG_INFO, "Activated....");
+	}
+	
+	/**
+	 * Register the Http Servlet after acquiring its value
+	 */
+	private void registerHttpServlet()
+	{
 		try
 		{
-			this.http.registerServlet("/dogws", this, null, null);
-			// store the bundle context
-			this.context = context;
-			
-			// initialize the instance-wide object mapper
-			this.mapper = new ObjectMapper();
-			// set the mapper pretty printing
-			this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
-			// avoid empty arrays and null values
-			this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
-			this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
-			
-			// init the logger with a null logger
-			this.logger = new LogHelper(this.context);
-			
-			// log the activation
-			this.logger.log(LogService.LOG_INFO, "Activated....");
+			this.http.registerServlet(this.websocketPath, this, null, null);
 		}
-		catch (ServletException e)
+		catch (ServletException | NamespaceException e)
 		{
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		catch (NamespaceException e)
+	}
+	
+	/**
+	 * Deactivate this component (before its unbind)
+	 */
+	public void deactivate()
+	{
+		// unregister the services
+		if (this.serviceRegManagedService != null)
 		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			this.serviceRegManagedService.unregister();
 		}
+		this.serviceRegManagedService = null;
 	}
 	
 	/**
@@ -300,7 +329,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 	
 	/*
 	 * (non-Javadoc)
-	 * @see org.osgi.service.event.EventHandler#handleEvent(org.osgi.service.event.Event)
+	 * 
+	 * @see
+	 * org.osgi.service.event.EventHandler#handleEvent(org.osgi.service.event
+	 * .Event)
 	 */
 	@Override
 	public void handleEvent(Event event)
@@ -308,6 +340,37 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler
 		// method that handle the event generated for notification
 		if (websocketImplementation != null && users.size() != 0)
 			websocketImplementation.sendNotification(event);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see org.osgi.service.cm.ManagedService#updated(java.util.Dictionary)
+	 */
+	@Override
+	public void updated(Dictionary<String, ?> properties) throws ConfigurationException
+	{
+		// maybe the received configuration is not for me...
+		if (properties != null)
+		{
+			String websocketPathTemp = "";
+			// maybe the reading process from the file could have some troubles
+			try
+			{
+				websocketPathTemp = (String) properties.get("WEBSOCKETPATH");
+				if ((!websocketPathTemp.isEmpty()) && (websocketPathTemp != null))
+				{
+					this.websocketPath = websocketPathTemp;
+				}
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		// even if we cannot read the value from the file we instantiate the
+		// server because there is a default value
+		registerHttpServlet();
+		
 	}
 	
 }

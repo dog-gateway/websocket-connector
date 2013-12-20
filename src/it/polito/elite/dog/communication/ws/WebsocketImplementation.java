@@ -53,9 +53,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	String[] endPointParts;
 	private WebsocketEndPoint websocketEndPoint;
 	
-	// enum MethodEnum { PUT, POST, GET, DELETE }
-	// enum ParameterType { QUERY, PATH, PAYLOAD }
-	
 	// connection used to send and receive messages
 	private Connection connection;
 	
@@ -141,7 +138,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			}
 			catch (IOException e)
 			{
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -253,7 +249,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 								| IllegalArgumentException | InstantiationException | IllegalAccessException
 								| InvocationTargetException e)
 						{
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 					}
@@ -276,7 +271,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			}
 			catch (IOException e1)
 			{
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		}
@@ -348,7 +342,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 					}
 					catch (IllegalArgumentException | IllegalAccessException e)
 					{
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
@@ -624,7 +617,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 								if (method.isAnnotationPresent(Produces.class))
 								{
 									Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
-									methodAnnotation = tempAnnotation.value()[0];// application/json
+									methodAnnotation = tempAnnotation.value()[0];
 									if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
 									{
 										rightMethod = method;
@@ -655,7 +648,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							if (method.isAnnotationPresent(Produces.class))
 							{
 								Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
-								String methodAnnotation = tempAnnotation.value()[0];// application/json
+								String methodAnnotation = tempAnnotation.value()[0];
 								if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
 								{
 									rightMethod = method;
@@ -823,7 +816,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		
 		boolean found = true;
-		// first of all we devide the endPoint in different parts (that in the
+		// first of all we divide the endPoint in different parts (that in the
 		// path are separated by "/")
 		
 		if (endPoint.startsWith("/"))
