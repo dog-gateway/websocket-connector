@@ -2,8 +2,6 @@ package it.polito.elite.dog.communication.ws;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-import it.polito.elite.dog.core.housemodel.api.EnvironmentModel;
-import it.polito.elite.dog.core.housemodel.api.HouseModel;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
@@ -81,6 +79,138 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		// accessible (it is the part that follow server.com:8080)
 		this.websocketPath = "/dogws";
 		
+	}
+	
+	/**
+	 * 
+	 * @param context
+	 */
+	public void activate(BundleContext context)
+	{
+		// store the bundle context
+		this.context = context;
+		
+		// initialize the instance-wide object mapper
+		this.mapper = new ObjectMapper();
+		// set the mapper pretty printing
+		this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
+		// avoid empty arrays and null values
+		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
+		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
+		
+		// init the logger with a null logger
+		this.logger = new LogHelper(this.context);
+		
+		// log the activation
+		this.logger.log(LogService.LOG_INFO, "Activated....");
+	}
+	
+	/**
+	 * Deactivate this component (before its unbind)
+	 */
+	public void deactivate()
+	{
+		// unregister the services
+		if (this.serviceRegManagedService != null)
+		{
+			this.serviceRegManagedService.unregister();
+		}
+		this.serviceRegManagedService = null;
+	}
+	
+	/**
+	 * Bind the DeviceRESTApi service (before the bundle activation)
+	 * 
+	 * @param deviceRestApi
+	 *            the DeviceRestApi service to add
+	 */
+	public void addedDeviceRESTApi(DeviceRESTApi deviceRestApi)
+	{
+		// store a reference to the DeviceRESTApi service
+		this.deviceRestApi.set(deviceRestApi);
+	}
+	
+	/**
+	 * Unbind the DeviceRESTApi service
+	 * 
+	 * @param deviceRestApi
+	 *            the DeviceRESTApi service to remove
+	 */
+	public void removedDeviceRESTApi(DeviceRESTApi deviceRestApi)
+	{
+		this.deviceRestApi.compareAndSet(deviceRestApi, null);
+	}
+	
+	/**
+	 * Bind the EnvironmentRESTApi service (before the bundle activation)
+	 * 
+	 * @param environmentRestApi
+	 *            the EnvironmentRestApi service to add
+	 */
+	public void addedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
+	{
+		// store a reference to the EnvironmentRESTApi service
+		this.environmentRestApi.set(environmentRestApi);
+	}
+	
+	/**
+	 * Unbind the EnvironmentRESTApi service
+	 * 
+	 * @param environmentRestApi
+	 *            the EnvironmentRESTApi service to remove
+	 */
+	public void removedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
+	{
+		this.environmentRestApi.compareAndSet(environmentRestApi, null);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.eclipse.jetty.websocket.WebSocketFactory.Acceptor#doWebSocketConnect
+	 * (javax.servlet.http.HttpServletRequest, java.lang.String)
+	 */
+	@Override
+	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
+	{
+		// Method used every time a user try to connect to the server
+		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
+		
+		// create an instance of WebsocketImplementation
+		websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
+				this.environmentRestApi);
+		return websocketImplementation;
+	}
+	
+	/**
+	 * Register the Http Servlet after acquiring its value
+	 */
+	private void registerHttpServlet()
+	{
+		try
+		{
+			this.http.registerServlet(this.websocketPath, this, null, null);
+		}
+		catch (ServletException | NamespaceException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * The Http Service allows other bundles in the OSGi environment to
+	 * dynamically register resources and servlets into the URI namespace of
+	 * Http Service. A bundle may later unregister its resources or servlets.
+	 * This method is called after the registration of the service to store the
+	 * instance in our variable
+	 * 
+	 * @param http
+	 *            HttpService
+	 */
+	public void addHttp(HttpService http)
+	{
+		this.http = http;
 	}
 	
 	/**
@@ -184,71 +314,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	/**
-	 * Bind the DeviceRESTApi service (before the bundle activation)
-	 * 
-	 * @param deviceRestApi
-	 *            the DeviceRestApi service to add
-	 */
-	public void addedDeviceRESTApi(DeviceRESTApi deviceRestApi)
-	{
-		// store a reference to the DeviceRESTApi service
-		this.deviceRestApi.set(deviceRestApi);
-	}
-	
-	/**
-	 * Unbind the DeviceRESTApi service
-	 * 
-	 * @param deviceRestApi
-	 *            the DeviceRESTApi service to remove
-	 */
-	public void removedDeviceRESTApi(DeviceRESTApi deviceRestApi)
-	{
-		this.deviceRestApi.compareAndSet(deviceRestApi, null);
-	}
-	
-	/**
-	 * Bind the EnvironmentRESTApi service (before the bundle activation)
-	 * 
-	 * @param environmentRestApi
-	 *            the EnvironmentRestApi service to add
-	 */
-	public void addedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
-	{
-		// store a reference to the EnvironmentRESTApi service
-		this.environmentRestApi.set(environmentRestApi);
-	}
-	
-	/**
-	 * Unbind the EnvironmentRESTApi service
-	 * 
-	 * @param environmentRestApi
-	 *            the EnvironmentRESTApi service to remove
-	 */
-	public void removedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
-	{
-		this.environmentRestApi.compareAndSet(environmentRestApi, null);
-	}
-	
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.eclipse.jetty.websocket.WebSocketFactory.Acceptor#doWebSocketConnect
-	 * (javax.servlet.http.HttpServletRequest, java.lang.String)
-	 */
-	@Override
-	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
-	{
-		// Method used every time a user try to connect to the server
-		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
-		
-		// create an instance of WebsocketImplementation
-		websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
-				this.environmentRestApi);
-		return websocketImplementation;
-	}
-	
-	/**
 	 * Get the classLoader needed to invoke methods It is necessary because the
 	 * invocation is possible only from the main class of the package
 	 * 
@@ -258,73 +323,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public ClassLoader getClassloader() throws ClassNotFoundException
 	{
 		return WebsocketEndPoint.class.getClassLoader();
-	}
-	
-	/**
-	 * 
-	 * @param context
-	 */
-	public void activate(BundleContext context)
-	{
-		// store the bundle context
-		this.context = context;
-		
-		// initialize the instance-wide object mapper
-		this.mapper = new ObjectMapper();
-		// set the mapper pretty printing
-		this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
-		// avoid empty arrays and null values
-		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
-		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
-		
-		// init the logger with a null logger
-		this.logger = new LogHelper(this.context);
-		
-		// log the activation
-		this.logger.log(LogService.LOG_INFO, "Activated....");
-	}
-	
-	/**
-	 * Register the Http Servlet after acquiring its value
-	 */
-	private void registerHttpServlet()
-	{
-		try
-		{
-			this.http.registerServlet(this.websocketPath, this, null, null);
-		}
-		catch (ServletException | NamespaceException e)
-		{
-			e.printStackTrace();
-		}
-	}
-	
-	/**
-	 * Deactivate this component (before its unbind)
-	 */
-	public void deactivate()
-	{
-		// unregister the services
-		if (this.serviceRegManagedService != null)
-		{
-			this.serviceRegManagedService.unregister();
-		}
-		this.serviceRegManagedService = null;
-	}
-	
-	/**
-	 * The Http Service allows other bundles in the OSGi environment to
-	 * dynamically register resources and servlets into the URI namespace of
-	 * Http Service. A bundle may later unregister its resources or servlets.
-	 * This method is called after the registration of the service to store the
-	 * instance in our variable
-	 * 
-	 * @param http
-	 *            HttpService
-	 */
-	public void addHttp(HttpService http)
-	{
-		this.http = http;
 	}
 	
 	/*
@@ -344,6 +342,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	
 	/*
 	 * (non-Javadoc)
+	 * 
 	 * @see org.osgi.service.cm.ManagedService#updated(java.util.Dictionary)
 	 */
 	@Override
