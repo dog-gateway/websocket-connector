@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset="utf-8" />
+
+<title>WebSocket Test</title>
+
+<script language="javascript" type="text/javascript">
+
+  //var wsUri = "ws://echo.websocket.org";
+  var wsUri = "ws://localhost:8080/dogws";
+  var output;
+
+  function init()
+  {
+    output = document.getElementById("output");
+    //testWebSocket();
+  }
+
+
+function replacer(key, value) {
+    if (typeof value === 'number' && !isFinite(value)) {
+        return String(value);
+    }
+    return value;
+}
+
+  function startWebSocket()
+  {
+    if (!window.WebSocket)
+	{
+        	alert("WebSocket not supported by this browser");
+		var connessione=document.getElementById("connessione");
+		connessione.removeChild(connessione.childNodes[0]);
+	}
+	else
+	{
+		wsUri=document.getElementById("URL").value;
+		websocket = new WebSocket(wsUri);
+		websocket.onopen = function(evt) { onOpen(evt) };
+		websocket.onclose = function(evt) { onClose(evt) };
+		websocket.onmessage = function(evt) { onMessage(evt) };
+		websocket.onerror = function(evt) { onError(evt) };
+	}
+  }
+
+  function onOpen(evt)
+  {
+
+	var stato=document.getElementById("stato");
+	stato.removeChild(stato.childNodes[0]);
+	var div = document.createElement("div");
+	div.setAttribute("id","testo");
+	div.innerHTML="CONNECTED";
+	stato.appendChild(div);
+    writeToScreen("CONNECTED");
+    
+	aggiungi_pulsante_disconnetti();
+  }
+
+function aggiungi_pulsante_disconnetti()
+{
+
+	var connetti_new = document.createElement("div");
+	connetti_new.setAttribute("id","connetti");
+    var input_button_close = document.createElement("input");
+	input_button_close.setAttribute("type","submit");
+	input_button_close.setAttribute("value","Chiudi connessione");
+	input_button_close.setAttribute("onclick","websocket.close()");
+
+	connetti_new.appendChild(input_button_close);
+
+
+	var br=document.createElement("br");
+	
+	connetti_new.appendChild(br);
+	
+
+	connetti_new.innerHTML += "sequenceNumber: ";
+	var input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","sequenceNumber");
+	input.setAttribute("id","sequenceNumber");
+	input.setAttribute("value","1");
+	//input.setAttribute("onkeypress","javascript:if(event.keyCode==13) doSend();");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+
+	connetti_new.innerHTML += "messageType: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","messageType");
+	input.setAttribute("value","request");
+	input.setAttribute("id","messageType");
+	//input.setAttribute("value","");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+
+	connetti_new.appendChild(br);
+
+	connetti_new.innerHTML += "type: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","type");
+	input.setAttribute("id","type");
+	//input.setAttribute("value","");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+	
+	connetti_new.innerHTML += "action: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","action");
+	input.setAttribute("id","action");
+	input.setAttribute("value","GET");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+
+	connetti_new.innerHTML += "endPoint: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","endPoint");
+	input.setAttribute("id","endPoint");
+	input.setAttribute("value","/api/devices/status");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+
+	connetti_new.innerHTML += "parameters: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","parameters");
+	input.setAttribute("id","parameters");
+	input.setAttribute("value","");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+
+	connetti_new.innerHTML += "notifications: ";
+	input = document.createElement("input");
+	input.setAttribute("type","text");
+	input.setAttribute("name","notifications");
+	input.setAttribute("id","notifications");
+	input.setAttribute("value","");
+	input.setAttribute("size","15");
+	connetti_new.appendChild(input);
+
+	connetti_new.appendChild(br);
+
+    var input_button = document.createElement("input");
+	input_button.setAttribute("type","submit");
+	input_button.setAttribute("value","invia");
+	input_button.setAttribute("onclick","doSend()");
+	connetti_new.appendChild(input_button);
+	var connetti=document.getElementById("connessione");
+	connetti.removeChild(connetti.childNodes[0]);
+	
+	var connessione=document.getElementById("connessione");
+	connessione.appendChild(connetti_new);
+
+}
+
+function aggiungi_pulsante_connetti()
+{
+	var connessione=document.getElementById("connessione");
+
+	var connetti_new = document.createElement("div");
+	connetti_new.setAttribute("id","connetti");
+	var input_button_open = document.createElement("input");
+	input_button_open.setAttribute("type","submit");
+	input_button_open.setAttribute("value","Apri connessione");
+	input_button_open.setAttribute("onclick","startWebSocket()");
+
+
+	connetti_new.appendChild(input_button_open);
+
+	
+	connessione.removeChild(connessione.childNodes[0]);
+	connessione.appendChild(connetti_new);
+	var clientId=document.getElementById("client");
+	clientId.removeChild(clientId.childNodes[0]);
+}
+  function onClose(evt)
+  {
+	
+	var stato=document.getElementById("stato");
+	stato.removeChild(stato.childNodes[0]);
+	var div = document.createElement("div");
+	div.setAttribute("id","testo");
+	div.innerHTML="DISCONNECTED";
+	stato.appendChild(div);
+    writeToScreen("DISCONNECTED");
+	aggiungi_pulsante_connetti();
+  }
+
+  function onMessage(evt)
+  {
+	  //alert(evt.data);
+	  try
+		{
+		   var obj = JSON.parse(evt.data);
+		   if (typeof(obj.clientId)!="undefined" && obj.clientId != "" && typeof(obj.type)!="undefined" && obj.type == "presentation")
+			{
+				var clientId_new = document.createElement("div");
+				clientId_new.setAttribute("id","client");
+		
+				clientId_new.innerHTML += "clientId: ";
+				var input = document.createElement("input");
+				input.setAttribute("type","text");
+				input.setAttribute("name","clientId");
+				input.setAttribute("id","clientId");
+				input.setAttribute("readonly","readonly");
+				input.setAttribute("style","background-color:#cccccc;");
+				input.setAttribute("value",obj.clientId);
+				//input.setAttribute("onkeypress","javascript:if(event.keyCode==13) doSend();");
+				input.setAttribute("size","85");
+				clientId_new.appendChild(input);
+				var clientId=document.getElementById("client");
+				clientId.appendChild(clientId_new);
+			}
+		}
+		catch(e)
+		{
+		   //non fa parsing
+		}		
+    writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+    //websocket.close();
+  }
+
+  function onError(evt)
+  {
+    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+  }
+
+  function doSend()
+  {
+	var clientId=document.getElementById("clientId").value;
+	var sequenceNumber=document.getElementById("sequenceNumber").value;
+	var messageType=document.getElementById("messageType").value;
+	var type=document.getElementById("type").value;
+	var action=document.getElementById("action").value;
+	var endPoint=document.getElementById("endPoint").value;
+	var parameters=document.getElementById("parameters").value;
+	var notifications=document.getElementById("notifications").value;
+	var myJSONObject = {};
+	if (clientId!=null && clientId!="")
+		myJSONObject["clientId"] = clientId;
+	if (sequenceNumber!=null && sequenceNumber!="")
+		myJSONObject["sequenceNumber"] = sequenceNumber;
+	if (messageType!=null && messageType!="")
+		myJSONObject["messageType"] = messageType;
+	if (type!=null && type!="")
+		myJSONObject["type"] = type;
+	if (action!=null && action!="")
+		myJSONObject["action"] = action;
+	if (endPoint!=null && endPoint!="")
+		myJSONObject["endPoint"] = endPoint;
+	if (parameters!=null && parameters!="")
+		myJSONObject["parameters"] = parameters;
+	if (notifications!=null && notifications!="")
+		myJSONObject["notifications"] = notifications;
+	var message = JSON.stringify(myJSONObject, replacer);
+    writeToScreen("SENDING: " + message + " ... ");
+	websocket.send(message);
+    writeToScreen("SENT: " + message);
+  }
+
+  function writeToScreen(message)
+  {
+    var pre = document.createElement("p");
+    pre.style.wordWrap = "break-word";
+    pre.innerHTML = message;
+    output.appendChild(pre);
+  }
+
+  window.addEventListener("load", init, false);
+
+		
+
+</script>
+</head>
+<body>
+<h2>WebSocket Test</h2>
+<div id="indirizzo">Indirizzo: <input type="text" id="URL" value="ws://localhost:8080/dogws"/></div>
+<div id="client"></div>
+<div id="stato">DISCONNECTED</div>
+<div id="connessione"><div id="connetti"><input onclick="startWebSocket()" value="Apri connessione" type="submit" /></div></div>
+<div id="invio"></br/></div>
+<div id="output"></div>
+</body>
+</html> 
