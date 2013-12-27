@@ -1,4 +1,4 @@
-package it.polito.elite.dog.communication.ws;
+package it.polito.elite.dog.communication.ws.message;
 
 import java.util.HashMap;
 import java.util.Set;

@@ -144,17 +144,6 @@ function aggiungi_pulsante_disconnetti()
 
 	connetti_new.appendChild(br);
 
-	connetti_new.innerHTML += "notifications: ";
-	input = document.createElement("input");
-	input.setAttribute("type","text");
-	input.setAttribute("name","notifications");
-	input.setAttribute("id","notifications");
-	input.setAttribute("value","");
-	input.setAttribute("size","15");
-	connetti_new.appendChild(input);
-
-	connetti_new.appendChild(br);
-
     var input_button = document.createElement("input");
 	input_button.setAttribute("type","submit");
 	input_button.setAttribute("value","invia");
@@ -249,7 +238,6 @@ function aggiungi_pulsante_connetti()
 	var action=document.getElementById("action").value;
 	var endPoint=document.getElementById("endPoint").value;
 	var parameters=document.getElementById("parameters").value;
-	var notifications=document.getElementById("notifications").value;
 	var myJSONObject = {};
 	if (clientId!=null && clientId!="")
 		myJSONObject["clientId"] = clientId;
@@ -265,8 +253,6 @@ function aggiungi_pulsante_connetti()
 		myJSONObject["endPoint"] = endPoint;
 	if (parameters!=null && parameters!="")
 		myJSONObject["parameters"] = parameters;
-	if (notifications!=null && notifications!="")
-		myJSONObject["notifications"] = notifications;
 	var message = JSON.stringify(myJSONObject, replacer);
     writeToScreen("SENDING: " + message + " ... ");
 	websocket.send(message);

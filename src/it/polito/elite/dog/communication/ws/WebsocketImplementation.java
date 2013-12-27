@@ -2,6 +2,7 @@ package it.polito.elite.dog.communication.ws;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+import it.polito.elite.dog.communication.ws.message.WebsocketJsonData;
 import it.polito.elite.dog.core.library.model.notification.Notification;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
@@ -46,7 +47,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	// number of initial parameters in the endPoint (ex uri or path) that
 	// indicates the class in which the requested action will be performed
 	// (devices, environment, rules, ...)
-	int numberOfClassParameters = 0;
+	int numberOfClassParameters;
 	// initial parameters in the endPoint (ex uri or path) that indicate the
 	// class in which the requested action will be performed (devices,
 	// environment, rules, ...)
@@ -70,6 +71,13 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	// the instance-level mapper
 	private ObjectMapper mapper;
 	
+	// variable used to store the clientId for the notification registration
+	private String clientIdForRegistration;
+	
+	// variable used to store the type of received message for the notification
+	// registration
+	private String typeForRegistration;
+	
 	public WebsocketImplementation(BundleContext context, WebsocketEndPoint websocketEndPoint,
 			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi)
 	{
@@ -78,6 +86,16 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		this.deviceRESTApi = deviceRESTApi;
 		// init the Environment Rest Api atomic reference
 		this.environmentRESTApi = environmentRESTApi;
+		
+		// init the variable used to store the type of received message for the
+		// notification registration
+		this.typeForRegistration = "";
+		
+		// init the variable used to store the clientId for the notification
+		// registration
+		this.clientIdForRegistration = "";
+		
+		this.numberOfClassParameters = 0;
 		
 		// store the bundle context
 		this.context = context;
@@ -169,7 +187,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 				String action = websocketReceivedData.getAction();
 				String endPoint = websocketReceivedData.getEndPoint();
 				String parameters = websocketReceivedData.getParameters();
-				String notifications = websocketReceivedData.getNotifications();
 				// check if the user is the right one and if the message is a
 				// request
 				if ((clientId != null)
@@ -184,73 +201,53 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 					// ["TemperatureMeasurementNotification",
 					// "AlertNotification", "BatteryLevelNotification"]
 					// or a simple string : "TemperatureMeasurementNotification"
-					if (type != null && type.equals("notificationRegistration"))
+					// but here we set only the clientId that we will use in the
+					// invoked method
+					if (type != null && type.toLowerCase().contains("notification"))
 					{
-						try
-						{
-							Object notificationsObject = this.mapper.readTree(notifications);
-							this.notificationRegistration(clientId, notificationsObject);
-						}
-						catch (Exception e)
-						{
-							this.notificationRegistration(clientId, notifications);
-						}
+						// set the clientId for the registration
+						this.clientIdForRegistration = clientId;
+						// set the type for the registration
+						this.typeForRegistration = type;
+						// set to 0 the variable by which we usually count the
+						// initial parts of path that indicates the class
+						this.numberOfClassParameters = 0;
 					}
-					else if (type != null && type.equals("notificationUnregistration"))
+					// it is not a registration or unregistration request
+					// for notifications
+					String result;
+					try
 					{
-						// if it is a notification registration we have to call
-						// the method to register a notification (or a list of
-						// notifications)
-						// the parameters could be a list of string
-						// ["TemperatureMeasurementNotification",
-						// "AlertNotification", "BatteryLevelNotification"]
-						// or a simple string :
-						// "TemperatureMeasurementNotification"
-						try
+						// obtain the requested information from the method
+						// that invoke the right method by Path annotation
+						result = this.invokeMethodByAnnotation(endPoint, action, parameters);
+						this.logger.log(LogService.LOG_INFO, "Sending data: " + result);
+						// transform the result in a Json message
+						WebsocketJsonData jsonResponse = new WebsocketJsonData();
+						if (!clientId.isEmpty())
+							jsonResponse.setClientId(clientId);
+						if (!sequenceNumber.isEmpty())
+							jsonResponse.setSequenceNumber(sequenceNumber);
+						jsonResponse.setMessageType("response");
+						if (!action.isEmpty())
+							jsonResponse.setAction(action);
+						if (!endPoint.isEmpty())
+							jsonResponse.setEndPoint(endPoint);
+						if (!result.isEmpty())
 						{
-							Object notificationsObject = this.mapper.readTree(notifications);
-							this.notificationUnregistration(clientId, notificationsObject);
-						}
-						catch (Exception e)
-						{
-							this.notificationUnregistration(clientId, notifications);
-						}
-					}
-					else
-					{
-						// it is not a registration or unregistration request
-						// for notifications
-						String result;
-						try
-						{
-							// obtain the requested information from the method
-							// that invoke the right method by Path annotation
-							result = this.invokeMethodByAnnotation(endPoint, action, parameters);
-							this.logger.log(LogService.LOG_INFO, "Sending data: " + result);
-							// transform the result in a Json message
-							WebsocketJsonData jsonResponse = new WebsocketJsonData();
-							if (!clientId.isEmpty())
-								jsonResponse.setClientId(clientId);
-							if (!sequenceNumber.isEmpty())
-								jsonResponse.setSequenceNumber(sequenceNumber);
-							jsonResponse.setMessageType("response");
-							if (!action.isEmpty())
-								jsonResponse.setAction(action);
-							if (!endPoint.isEmpty())
-								jsonResponse.setEndPoint(endPoint);
 							Object resultObject = this.mapper.readTree(result);
-							if (!result.isEmpty())
-								jsonResponse.setResponse(resultObject);
-							String response = this.mapper.writeValueAsString(jsonResponse);
-							// send the message just created
-							this.connectionInstance.connection.sendMessage(response);
+							jsonResponse.setResponse(resultObject);
 						}
-						catch (ClassNotFoundException | SecurityException | NoSuchMethodException
-								| IllegalArgumentException | InstantiationException | IllegalAccessException
-								| InvocationTargetException e)
-						{
-							e.printStackTrace();
-						}
+						//TODO quando registro una notifica cosa rispondo?
+						String response = this.mapper.writeValueAsString(jsonResponse);
+						// send the message just created
+						this.connectionInstance.connection.sendMessage(response);
+					}
+					catch (ClassNotFoundException | SecurityException | NoSuchMethodException
+							| IllegalArgumentException | InstantiationException | IllegalAccessException
+							| InvocationTargetException e)
+					{
+						e.printStackTrace();
 					}
 				}
 				else
@@ -428,8 +425,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 *            List of notifications from which the user want to be
 	 *            subscribed
 	 */
-	public void notificationRegistration(String clientId, Object notifications) throws JsonParseException,
-			JsonMappingException
+	@PUT
+	@Path("/api/devices/notifications")
+	public void notificationRegistration(Object notifications) throws JsonParseException, JsonMappingException
 	{
 		// list of notification that has to be subscribed
 		ArrayList<String> notificationsList = new ArrayList<String>();
@@ -461,7 +459,14 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		}
 		// at the end of the process that chooses which notifications have to be
 		// subscribed we can call the method that does the real subscription
-		websocketEndPoint.putListOfNotificationsPerUser(clientId, notificationsList);
+		if (!notificationsList.isEmpty())
+		{
+			websocketEndPoint.putListOfNotificationsPerUser(this.clientIdForRegistration, notificationsList);
+		}
+		else
+		{
+			//TODO se non c'è niente come lista delle notifiche devo registrare tutte le notifiche per tutti gli id
+		}
 		
 	}
 	
@@ -496,261 +501,319 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		
 		// first of all we choose the class that contains the method we want to
 		// invoke
-		ClassLoader cls = this.websocketEndPoint.getClassloader();
-		Class<?> clazz = this.getRightClass(endPoint, cls);
+		Class<?> clazz = null;
 		
-		// now we scroll trough all methods available in the class looking for
-		// the annotations present
-		// if there are both "/api/devides/status" and
-		// "/api/devices/{device-id}" we have to take care to choose the right
-		// one
-		Method[] methods = clazz.getDeclaredMethods();
-		Method rightMethod = null;
-		List<String> rightArguments = new ArrayList<String>();
-		for (Method method : methods)
+		// then we divide the endPoint in different parts (in the
+		// path are separated by "/")
+		
+		if (endPoint.startsWith("/"))
 		{
-			// we start from the point to which the getRightClass arrived (for
-			// example after api/devices/)
-			int numberOfAnalizedPartsOfEndPoint = this.numberOfClassParameters;
-			// first of all we check if the analyzed method has the right action
-			// defined (GET, PUT, POST or DELETE)
-			if (method.isAnnotationPresent(GET.class) || method.isAnnotationPresent(PUT.class)
-					|| method.isAnnotationPresent(POST.class) || method.isAnnotationPresent(DELETE.class))
+			endPoint = endPoint.replaceFirst("/", "");
+		}
+		this.endPointParts = endPoint.split("/");
+		
+		if (this.typeForRegistration.contains("notification"))
+		{
+			clazz = this.getClass();
+		}
+		else
+		{
+			ClassLoader cls = this.websocketEndPoint.getClassloader();
+			clazz = this.getRightClass(endPoint, cls);
+		}
+		String result = "";
+		
+		if (clazz != null)
+		{
+			// now we scroll trough all methods available in the class looking
+			// for
+			// the annotations present
+			// if there are both "/api/devides/status" and
+			// "/api/devices/{device-id}" we have to take care to choose the
+			// right
+			// one
+			Method[] methods = clazz.getDeclaredMethods();
+			Method rightMethod = null;
+			List<String> rightArguments = new ArrayList<String>();
+			for (Method method : methods)
 			{
-				String actionAnnotation = "";
-				if (method.isAnnotationPresent(GET.class))
+				// we start from the point to which the getRightClass arrived
+				// (for
+				// example after api/devices/)
+				int numberOfAnalizedPartsOfEndPoint = this.numberOfClassParameters;
+				// first of all we check if the analyzed method has the right
+				// action
+				// defined (GET, PUT, POST or DELETE)
+				if (method.isAnnotationPresent(GET.class) || method.isAnnotationPresent(PUT.class)
+						|| method.isAnnotationPresent(POST.class) || method.isAnnotationPresent(DELETE.class))
 				{
-					GET tempAnnotation = (GET) method.getAnnotation(GET.class);
-					actionAnnotation = tempAnnotation.annotationType().getSimpleName();
-				}
-				else if (method.isAnnotationPresent(POST.class))
-				{
-					POST tempAnnotation = (POST) method.getAnnotation(POST.class);
-					actionAnnotation = tempAnnotation.annotationType().getSimpleName();
-				}
-				else if (method.isAnnotationPresent(PUT.class))
-				{
-					PUT tempAnnotation = (PUT) method.getAnnotation(PUT.class);
-					actionAnnotation = tempAnnotation.annotationType().getSimpleName();
-				}
-				else if (method.isAnnotationPresent(DELETE.class))
-				{
-					DELETE tempAnnotation = (DELETE) method.getAnnotation(DELETE.class);
-					actionAnnotation = tempAnnotation.annotationType().getSimpleName();
-				}
-				// if the action is the right one we can check which is the
-				// right method (with the right annotation)
-				if (actionAnnotation.isEmpty() || actionAnnotation.equals(action))
-				{
-					// here we acquire the annotation defined for the method
-					// analyzed
-					if (method.isAnnotationPresent(Path.class))
+					String actionAnnotation = "";
+					if (method.isAnnotationPresent(GET.class))
 					{
-						Path tempPathAnnotation = (Path) method.getAnnotation(Path.class);
-						String methodAnnotation = tempPathAnnotation.value().toString();
-						// if there is a "/" at the beginning of the path we
-						// will remove it
-						if (methodAnnotation.startsWith("/"))
+						GET tempAnnotation = (GET) method.getAnnotation(GET.class);
+						actionAnnotation = tempAnnotation.annotationType().getSimpleName();
+					}
+					else if (method.isAnnotationPresent(POST.class))
+					{
+						POST tempAnnotation = (POST) method.getAnnotation(POST.class);
+						actionAnnotation = tempAnnotation.annotationType().getSimpleName();
+					}
+					else if (method.isAnnotationPresent(PUT.class))
+					{
+						PUT tempAnnotation = (PUT) method.getAnnotation(PUT.class);
+						actionAnnotation = tempAnnotation.annotationType().getSimpleName();
+					}
+					else if (method.isAnnotationPresent(DELETE.class))
+					{
+						DELETE tempAnnotation = (DELETE) method.getAnnotation(DELETE.class);
+						actionAnnotation = tempAnnotation.annotationType().getSimpleName();
+					}
+					// if the action is the right one we can check which is the
+					// right method (with the right annotation)
+					if (actionAnnotation.isEmpty() || actionAnnotation.equals(action))
+					{
+						// here we acquire the annotation defined for the method
+						// analyzed
+						if (method.isAnnotationPresent(Path.class))
 						{
-							methodAnnotation = methodAnnotation.replaceFirst("/", "");
-						}
-						String[] methodAnnotationParts = methodAnnotation.split("/");
-						List<String> arguments = new ArrayList<String>();
-						// here we check if the method analyzed and the method
-						// we are looking for have the same number of annotation
-						// parts
-						if (methodAnnotationParts.length == (this.endPointParts.length - numberOfAnalizedPartsOfEndPoint))
-						{
-							for (int k = 0; k < (this.endPointParts.length - this.numberOfClassParameters); k++)
+							Path tempPathAnnotation = (Path) method.getAnnotation(Path.class);
+							String methodAnnotation = tempPathAnnotation.value().toString();
+							// if there is a "/" at the beginning of the path we
+							// will remove it
+							if (methodAnnotation.startsWith("/"))
 							{
-								// if there are both "/api/devides/status" and
-								// "/api/devices/{device-id}" we have to take
-								// care to choose the right one
-								if (methodAnnotationParts[k].compareTo(endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
+								methodAnnotation = methodAnnotation.replaceFirst("/", "");
+							}
+							String[] methodAnnotationParts = methodAnnotation.split("/");
+							List<String> arguments = new ArrayList<String>();
+							// here we check if the method analyzed and the
+							// method
+							// we are looking for have the same number of
+							// annotation
+							// parts
+							if (methodAnnotationParts.length == (this.endPointParts.length - numberOfAnalizedPartsOfEndPoint))
+							{
+								for (int k = 0; k < (this.endPointParts.length - this.numberOfClassParameters); k++)
 								{
-									// if I have already choose a method it
-									// means that a method without a parameter
-									// exists (because in the other case I say
-									// that it is the right method only at the
-									// end (when I've analyzed all the
-									// parameters))
-									if (rightMethod == null)
+									// if there are both "/api/devides/status"
+									// and
+									// "/api/devices/{device-id}" we have to
+									// take
+									// care to choose the right one
+									if (methodAnnotationParts[k]
+											.compareTo(endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
 									{
-										// if "{" or "}" is present it means
-										// that it is a parameter
-										// So we insert it in the list of
-										// arguments (we need the parameters for
-										// the invoke method)
-										if ((methodAnnotationParts[k].indexOf("{") != -1)
-												&& (methodAnnotationParts[k].indexOf("}") != -1))
+										// if I have already choose a method it
+										// means that a method without a
+										// parameter
+										// exists (because in the other case I
+										// say
+										// that it is the right method only at
+										// the
+										// end (when I've analyzed all the
+										// parameters))
+										if (rightMethod == null)
 										{
-											arguments.add(new String(
-													this.endPointParts[numberOfAnalizedPartsOfEndPoint]));
+											// if "{" or "}" is present it means
+											// that it is a parameter
+											// So we insert it in the list of
+											// arguments (we need the parameters
+											// for
+											// the invoke method)
+											if ((methodAnnotationParts[k].indexOf("{") != -1)
+													&& (methodAnnotationParts[k].indexOf("}") != -1))
+											{
+												arguments.add(new String(
+														this.endPointParts[numberOfAnalizedPartsOfEndPoint]));
+											}
+											else
+											{
+												break;
+											}
 										}
 										else
-										{
+											// if a method has already chosen
+											// and we
+											// are here it would means that it
+											// is
+											// the wrong method or that we have
+											// already chosen the method without
+											// parameters (/api/devices/status
+											// instead of di
+											// /api/devices/{devide-id})
 											break;
+									}
+									numberOfAnalizedPartsOfEndPoint++;
+								}
+								if (numberOfAnalizedPartsOfEndPoint == (this.endPointParts.length))
+								{
+									// if we arrived at the end of Path and the
+									// dimension of endPoint is equal to the
+									// dimension of annotation it may be the
+									// right
+									// method
+									// but we have to check if the output of the
+									// method is the right one (Json) (if there
+									// is
+									// not a "Produces" annotation we assumes
+									// that
+									// it produces Json)
+									if (method.isAnnotationPresent(Produces.class))
+									{
+										Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
+										methodAnnotation = tempAnnotation.value()[0];
+										if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
+										{
+											rightMethod = method;
+											rightArguments = arguments;
 										}
 									}
 									else
-										// if a method has already chosen and we
-										// are here it would means that it is
-										// the wrong method or that we have
-										// already chosen the method without
-										// parameters (/api/devices/status
-										// instead of di
-										// /api/devices/{devide-id})
-										break;
-								}
-								numberOfAnalizedPartsOfEndPoint++;
-							}
-							if (numberOfAnalizedPartsOfEndPoint == (this.endPointParts.length))
-							{
-								// if we arrived at the end of Path and the
-								// dimension of endPoint is equal to the
-								// dimension of annotation it may be the right
-								// method
-								// but we have to check if the output of the
-								// method is the right one (Json) (if there is
-								// not a "Produces" annotation we assumes that
-								// it produces Json)
-								if (method.isAnnotationPresent(Produces.class))
-								{
-									Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
-									methodAnnotation = tempAnnotation.value()[0];
-									if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
 									{
 										rightMethod = method;
 										rightArguments = arguments;
 									}
 								}
-								else
-								{
-									rightMethod = method;
-									rightArguments = arguments;
-								}
 							}
 						}
-					}
-					else
-					{
-						// if the endPoint has not other parts after the path
-						// used to select the class (/api/devices or
-						// /api/environment) it means that the method we are
-						// looking for has to answer to path /api/devices or
-						// /api/environment
-						if ((this.endPointParts.length - numberOfAnalizedPartsOfEndPoint) == 0)
+						else
 						{
-							// we have to check if the output of the method is
-							// the right one (Json) (if there is not a
-							// "Produces" annotation we assumes that it produces
-							// Json)
-							if (method.isAnnotationPresent(Produces.class))
+							// if the endPoint has not other parts after the
+							// path
+							// used to select the class (/api/devices or
+							// /api/environment) it means that the method we are
+							// looking for has to answer to path /api/devices or
+							// /api/environment
+							if ((this.endPointParts.length - numberOfAnalizedPartsOfEndPoint) == 0)
 							{
-								Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
-								String methodAnnotation = tempAnnotation.value()[0];
-								if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
+								// we have to check if the output of the method
+								// is
+								// the right one (Json) (if there is not a
+								// "Produces" annotation we assumes that it
+								// produces
+								// Json)
+								if (method.isAnnotationPresent(Produces.class))
+								{
+									Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
+									String methodAnnotation = tempAnnotation.value()[0];
+									if (methodAnnotation.compareTo(MediaType.APPLICATION_JSON) == 0)
+									{
+										rightMethod = method;
+										rightArguments = new ArrayList<String>();
+									}
+								}
+								else
 								{
 									rightMethod = method;
 									rightArguments = new ArrayList<String>();
 								}
 							}
-							else
+						}
+					}
+				}
+			}
+			// if the method requires parameters we insert them in the list of
+			// rightArguments (that we will pass to the method)
+			// the parameters are specified as a Json string
+			if ((parameters != null) && (!parameters.isEmpty()))
+			{
+				rightArguments.add(new String(parameters));
+			}
+			if (rightMethod != null)
+			{
+				// check how many parameters the method needs and if we need one
+				// more parameter (there methods that ask for a parameter that
+				// could
+				// be empty) we will insert an empty one
+				Annotation[][] parameterAnnotations = rightMethod.getParameterAnnotations();
+				int numMethodParameters = 0;
+				numMethodParameters = parameterAnnotations.length;
+				if (numMethodParameters == rightArguments.size() + 1)
+				{
+					rightArguments.add(null);
+				}
+				// if the action required is "GET" the method will return a
+				// value
+				// otherwise we have to intercept the WebApplicationException
+				// generated
+				if (action.equals("GET"))
+				{
+					if (clazz.toString().toLowerCase().indexOf("device") != -1)
+					{
+						result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+					}
+					if (clazz.toString().toLowerCase().indexOf("environment") != -1)
+					{
+						result = (String) rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
+					}
+				}
+				else
+				{
+					if (clazz.toString().toLowerCase().contains("device"))
+					{
+						try
+						{
+							rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+						}
+						catch (WebApplicationException | InvocationTargetException e)
+						{
+							// here we intercept the Exception generated to say
+							// if
+							// the operation has executed correctly
+							String resultMessage = "";
+							if (e instanceof InvocationTargetException)
 							{
-								rightMethod = method;
-								rightArguments = new ArrayList<String>();
+								InvocationTargetException exception = (InvocationTargetException) e;
+								resultMessage = exception.getTargetException().getMessage();
 							}
+							else if (e instanceof WebApplicationException)
+							{
+								WebApplicationException exception = (WebApplicationException) e;
+								resultMessage = exception.getResponse().toString();
+							}
+							// we send the result as Json
+							// TODO create Json with jackson
+							result = "{\"result\":\"" + resultMessage + "\"}";
 						}
 					}
-				}
-			}
-		}
-		// if the method requires parameters we insert them in the list of
-		// rightArguments (that we will pass to the method)
-		// the parameters are specified as a Json string
-		if ((parameters != null) && (!parameters.isEmpty()))
-		{
-			rightArguments.add(new String(parameters));
-		}
-		String result = "";
-		if (rightMethod != null)
-		{
-			// check how many parameters the method needs and if we need one
-			// more parameter (there methods that ask for a parameter that could
-			// be empty) we will insert an empty one
-			Annotation[][] parameterAnnotations = rightMethod.getParameterAnnotations();
-			int numMethodParameters = 0;
-			numMethodParameters = parameterAnnotations.length;
-			if (numMethodParameters == rightArguments.size() + 1)
-			{
-				rightArguments.add(null);
-			}
-			// if the action required is "GET" the method will return a value
-			// otherwise we have to intercept the WebApplicationException
-			// generated
-			if (action.equals("GET"))
-			{
-				if (clazz.toString().toLowerCase().indexOf("device") != -1)
-				{
-					result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
-				}
-				if (clazz.toString().toLowerCase().indexOf("environment") != -1)
-				{
-					result = (String) rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
-				}
-			}
-			else
-			{
-				if (clazz.toString().toLowerCase().indexOf("device") != -1)
-				{
-					try
+					if (clazz.toString().toLowerCase().contains("environment"))
 					{
-						rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+						try
+						{
+							rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
+						}
+						catch (WebApplicationException | InvocationTargetException e)
+						{
+							// here we intercept the Exception generated to say
+							// if
+							// the operation has executed correctly
+							String resultMessage = "";
+							if (e instanceof InvocationTargetException)
+							{
+								InvocationTargetException exception = (InvocationTargetException) e;
+								resultMessage = exception.getTargetException().getMessage();
+							}
+							else if (e instanceof WebApplicationException)
+							{
+								WebApplicationException exception = (WebApplicationException) e;
+								resultMessage = exception.getResponse().toString();
+							}
+							// we send the result as Json
+							// TODO create Json with jackson
+							result = "{\"result\":\"" + resultMessage + "\"}";
+						}
 					}
-					catch (WebApplicationException | InvocationTargetException e)
+					if (clazz.equals(this.getClass()))
 					{
-						// here we intercept the Exception generated to say if
-						// the operation has executed correctly
-						String resultMessage = "";
-						if (e instanceof InvocationTargetException)
-						{
-							InvocationTargetException exception = (InvocationTargetException) e;
-							resultMessage = exception.getTargetException().getMessage();
-						}
-						else if (e instanceof WebApplicationException)
-						{
-							WebApplicationException exception = (WebApplicationException) e;
-							resultMessage = exception.getResponse().toString();
-						}
-						// we send the result as Json
-						// TODO create Json with jackson
-						result = "{\"result\":\"" + resultMessage + "\"}";
-					}
-				}
-				if (clazz.toString().toLowerCase().indexOf("environment") != -1)
-				{
-					try
-					{
-						rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
-					}
-					catch (WebApplicationException | InvocationTargetException e)
-					{
-						// here we intercept the Exception generated to say if
-						// the operation has executed correctly
-						String resultMessage = "";
-						if (e instanceof InvocationTargetException)
-						{
-							InvocationTargetException exception = (InvocationTargetException) e;
-							resultMessage = exception.getTargetException().getMessage();
-						}
-						else if (e instanceof WebApplicationException)
-						{
-							WebApplicationException exception = (WebApplicationException) e;
-							resultMessage = exception.getResponse().toString();
-						}
-						// we send the result as Json
-						// TODO create Json with jackson
-						result = "{\"result\":\"" + resultMessage + "\"}";
+							try
+							{
+								rightMethod.invoke(this, rightArguments.toArray());
+							}
+							catch (Exception e)
+							{
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 					}
 				}
 			}
@@ -776,25 +839,40 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 */
 	public Class<?> getRightClass(String endPoint, ClassLoader cls) throws ClassNotFoundException
 	{
+		Class<?> clazz = null;
 		// first of all we check if the method searched is in the DeviceRESTApi
 		// class
-		Class<?> clazz = cls.loadClass("it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi");
-		if (checkClass(clazz, endPoint))
+		try
 		{
-			return clazz;
+			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi");
+			if (checkClass(clazz, endPoint))
+			{
+				return clazz;
+			}
 		}
-		else
+		catch (Exception e)
 		{
-			// if the method is not in the DeviceRESTApi class, we look for it
-			// in the EnvironmentRESTApi class
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		// if the method is not in the DeviceRESTApi class (so if it doesn't
+		// return), we look for it
+		// in the EnvironmentRESTApi class
+		try
+		{
 			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi");
 			if (checkClass(clazz, endPoint))
 			{
 				return clazz;
 			}
-			else
-				return null;
 		}
+		catch (Exception e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	/**
@@ -816,40 +894,38 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		
 		boolean found = true;
-		// first of all we divide the endPoint in different parts (that in the
-		// path are separated by "/")
-		
-		if (endPoint.startsWith("/"))
-		{
-			endPoint = endPoint.replaceFirst("/", "");
-		}
-		this.endPointParts = endPoint.split("/");
-		
-		// then we do the same thing for the class annotation and we count the
-		// number of parameters obtained (so we know when we have to stop the
-		// comparison)
+		// we divide the class annotation in different parts (that are separated
+		// by "/") and we count the number of parameters obtained (so we know
+		// when we have to stop the comparison)
 		Path tempAnnotation = (Path) clazz.getAnnotation(Path.class);
-		String classAnnotation = tempAnnotation.value().toString();
-		if (classAnnotation.startsWith("/"))
+		if (tempAnnotation != null)
 		{
-			classAnnotation = classAnnotation.replaceFirst("/", "");
-		}
-		String[] annotationParts = classAnnotation.split("/");
-		this.numberOfClassParameters = 0;
-		for (String annotationPart : annotationParts)
-		{
-			if (annotationPart.compareTo(this.endPointParts[this.numberOfClassParameters]) != 0)
+			String classAnnotation = tempAnnotation.value().toString();
+			if (classAnnotation.startsWith("/"))
 			{
-				found = false;
-				break;
+				classAnnotation = classAnnotation.replaceFirst("/", "");
 			}
-			else
-				this.numberOfClassParameters++; // it is used in the other
-												// method to start looking for
-												// the method from the right
-												// point of Endpoint
+			String[] annotationParts = classAnnotation.split("/");
+			this.numberOfClassParameters = 0;
+			for (String annotationPart : annotationParts)
+			{
+				if (annotationPart.compareTo(this.endPointParts[this.numberOfClassParameters]) != 0)
+				{
+					found = false;
+					break;
+				}
+				else
+					this.numberOfClassParameters++; // it is used in the other
+													// method to start looking
+													// for
+													// the method from the right
+													// point of Endpoint
+			}
+			return found;
 		}
-		return found;
+		else
+			return false;
+		
 	}
 	
 }
