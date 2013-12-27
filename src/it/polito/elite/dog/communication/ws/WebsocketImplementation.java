@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
@@ -37,6 +38,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
@@ -237,8 +239,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						{
 							Object resultObject = this.mapper.readTree(result);
 							jsonResponse.setResponse(resultObject);
+							//TODO se risposta è vuota bisogna scrivere qualcosa dentro (se sei sicuro di rispondere sempre allora dì ke richesta è sbagliata)
 						}
-						//TODO quando registro una notifica cosa rispondo?
 						String response = this.mapper.writeValueAsString(jsonResponse);
 						// send the message just created
 						this.connectionInstance.connection.sendMessage(response);
@@ -353,21 +355,29 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						{
 							// here we send the notification only to the users
 							// that have submitted to receive the kind of
-							// notification just received
-							ArrayList<String> listOfNotification = new ArrayList<String>();
-							listOfNotification = websocketEndPoint.getListOfNotificationsPerUser(user.toString()
+							// notification just received for the device that sends it
+							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
+							listOfControllable = websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user.toString()
 									.substring(user.toString().indexOf("@") + 1));
-							if (listOfNotification != null && listOfNotification.contains(eventName.toString()))
+							if (listOfControllable != null && (!notificationContent.get("deviceUri").isEmpty()))
 							{
-								// transform the notification in Json format,
-								// with clienId, messageType, type
-								notificationResponse.setNotification(notificationContent);
-								notificationResponse.setClientId(user.toString().substring(
-										user.toString().indexOf("@") + 1));
-								notificationResponse.setMessageType("info");
-								notificationResponse.setType("notification");
-								String notificationToSend = this.mapper.writeValueAsString(notificationResponse);
-								user.connection.sendMessage(notificationToSend);
+								ArrayList<String> listOfNotification = listOfControllable.get((String) notificationContent.get("deviceUri"));
+								if (listOfNotification == null)
+								{
+									listOfNotification = listOfControllable.get("all");
+								}
+								if (listOfNotification != null && (listOfNotification.contains(eventName.toString()) || listOfNotification.contains("all")))
+								{
+									// transform the notification in Json format,
+									// with clienId, messageType, type
+									notificationResponse.setNotification(notificationContent);
+									notificationResponse.setClientId(user.toString().substring(
+											user.toString().indexOf("@") + 1));
+									notificationResponse.setMessageType("info");
+									notificationResponse.setType("notification");
+									String notificationToSend = this.mapper.writeValueAsString(notificationResponse);
+									user.connection.sendMessage(notificationToSend);
+								}
 							}
 						}
 						catch (IOException e)
@@ -390,16 +400,20 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 *            List of notifications from which the user want to be
 	 *            unsubscribed
 	 */
-	public void notificationUnregistration(String clientId, Object notifications) throws JsonParseException,
+	public String notificationUnregistration(String clientId, String controllable, Object notifications) throws JsonParseException,
 			JsonMappingException
 	{
+		String result = "NO";
+		//TODO risultato Json
 		// The notifications could be a simple string (only one notification) or
 		// a list of element
 		if (notifications instanceof String)
 		{
 			// if we receive only one single notification we can call directly
 			// the method that does the unregistration
-			websocketEndPoint.removeListOfNotificationsPerUser(clientId, (String) notifications);
+			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, (String) notifications))
+				result = "OK";
+			//TODO Risultato Json
 		}
 		else if (notifications instanceof ArrayNode)
 		{
@@ -407,12 +421,53 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// call the method that does the unregistration
 			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
 			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
+			result = "OK"; //TODO risultato Json
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
-				websocketEndPoint.removeListOfNotificationsPerUser(clientId, (String) current.getTextValue());
+				if (!websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, (String) current.getTextValue()))
+					result = "NO"; //TODO risultato Json
 			}
 		}
+		else
+		{
+			//if the notification list is empty the user wants to unsubscribe all the notifications
+			websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, "all");
+		}
+		return result;
+	}
+	
+
+	@PUT
+	@Path("/api/devices/notifications")
+	public String notificationRegistrationWithoutControllable(Object notifications) throws JsonParseException, JsonMappingException
+	{
+		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		{
+			return this.notificationRegistration(this.clientIdForRegistration, "all", notifications);
+		}
+		if (this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		{
+			return this.notificationUnregistration(this.clientIdForRegistration, "all", notifications);
+		}
+		return "errore"; //TODO risultato in Json
+	}
+	
+
+
+	@PUT
+	@Path("/api/devices/{controllable}/notifications")
+	public String notificationRegistrationWithControllable(@PathParam("controllable") String controllable, Object notifications) throws JsonParseException, JsonMappingException
+	{
+		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		{
+			return this.notificationRegistration(this.clientIdForRegistration, controllable, notifications);
+		}
+		if (this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		{
+			return this.notificationUnregistration(this.clientIdForRegistration, controllable, notifications);
+		}
+		return "errore"; //TODO risultato in Json
 	}
 	
 	/**
@@ -420,55 +475,66 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 * 
 	 * @param clientId
 	 *            Id of the client that is requiring the subscription
-	 * 
+	 * @param controllable
+	 *            the id of the device for which we want to subscribe the notifications
 	 * @param notifications
 	 *            List of notifications from which the user want to be
 	 *            subscribed
 	 */
-	@PUT
-	@Path("/api/devices/notifications")
-	public void notificationRegistration(Object notifications) throws JsonParseException, JsonMappingException
+	public String notificationRegistration(String clientId, String controllable, Object notifications) throws JsonParseException, JsonMappingException
 	{
-		// list of notification that has to be subscribed
-		ArrayList<String> notificationsList = new ArrayList<String>();
-		// we insert each notification only once, so if the user send the same
-		// notification name twice (or more) we insert only one
-		if (notifications instanceof String)
+		String result ="NO";
+		try
 		{
-			// if we receive only one single notification we can add it directly
-			// to the list of notifications
-			// but we do it only if the user has never subscribed the
-			// notification just received
-			if (!notificationsList.contains((String) notifications))
-				notificationsList.add((String) notifications);
-			
-		}
-		else if (notifications instanceof ArrayNode)
-		{
-			// scroll through all the items received and for each of them, if
-			// the user has never subscribed it, we add the specific
-			// notification to the list of notifications
-			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
-			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
-			while (iterator.hasNext())
+			// list of notification that has to be subscribed
+			ArrayList<String> notificationsList = new ArrayList<String>();
+			// we insert each notification only once, so if the user send the same
+			// notification name twice (or more) we insert only one
+			if (notifications instanceof String)
 			{
-				JsonNode current = iterator.next();
-				if (!notificationsList.contains((String) current.getTextValue()))
-					notificationsList.add(current.getTextValue());
+				// if we receive only one single notification we can add it directly
+				// to the list of notifications
+				// but we do it only if the user has never subscribed the
+				// notification just received
+				if (!notificationsList.contains((String) notifications))
+					notificationsList.add((String) notifications);
+				
 			}
+			else if (notifications instanceof ArrayNode)
+			{
+				// scroll through all the items received and for each of them, if
+				// the user has never subscribed it, we add the specific
+				// notification to the list of notifications
+				ArrayNode notificationsArrayNode = (ArrayNode) notifications;
+				Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
+				while (iterator.hasNext())
+				{
+					JsonNode current = iterator.next();
+					if (!notificationsList.contains((String) current.getTextValue()))
+						notificationsList.add(current.getTextValue());
+				}
+			}
+			//if the list is empty it means that the user wants to subscribe all the notifications
+			if (notificationsList.isEmpty())
+			{
+				notificationsList.add("all");
+			}
+			// at the end of the process that chooses which notifications have to be
+			// subscribed we can call the method that does the real subscription
+			if (websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable, notificationsList))
+				result = "OK";
+			//TODO risposta Json
 		}
-		// at the end of the process that chooses which notifications have to be
-		// subscribed we can call the method that does the real subscription
-		if (!notificationsList.isEmpty())
+		catch (Exception e)
 		{
-			websocketEndPoint.putListOfNotificationsPerUser(this.clientIdForRegistration, notificationsList);
+			e.printStackTrace();
+			result = "NO";
+			//TODO risposta Json
 		}
-		else
-		{
-			//TODO se non c'è niente come lista delle notifiche devo registrare tutte le notifiche per tutti gli id
-		}
+		return result;
 		
 	}
+	
 	
 	/**
 	 * @throws InvocationTargetException
@@ -811,8 +877,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							}
 							catch (Exception e)
 							{
-								// TODO Auto-generated catch block
 								e.printStackTrace();
+								result = "NO"; //TODO risultato in Json
 							}
 					}
 				}
@@ -852,7 +918,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -869,7 +934,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;

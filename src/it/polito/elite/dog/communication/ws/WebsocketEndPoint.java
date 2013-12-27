@@ -41,7 +41,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	// list of users (by instances)
 	private List<WebsocketImplementation> users;
 	// list of notifications per users
-	private Map<String, ArrayList<String>> listOfNotificationsPerUser;
+	private Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUser;
 	
 	// the service registration handle
 	private ServiceRegistration<?> serviceRegManagedService;
@@ -254,27 +254,114 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param clientId
 	 *            the id of a user (it is the last part of the instance (after
 	 *            the @))
+	 * @param controllable
+	 *            the id of the device for which we want to subscribe the notifications
 	 * @param notificationsList
 	 *            the list of notification that has to be subscribed
 	 */
-	public void putListOfNotificationsPerUser(String clientId, ArrayList<String> notificationsList)
+	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable, ArrayList<String> notificationsList)
 	{
-		ArrayList<String> existingList = this.listOfNotificationsPerUser.get(clientId);
-		// if the user has already subscribed other notifications, we have to
-		// copy them with the new one
-		// and then we insert the notification required only if it has not
-		// already been inserted
-		if (existingList != null)
+		boolean result = false;
+		try
 		{
-			for (String notification : notificationsList)
+			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			if (existingControllableList != null)
 			{
-				if (!existingList.contains((String) notification))
-					existingList.add(notification);
+				//if the user ask to subscribe the notifications for all the devices, it is not necessary to store the name of all the notifications already stored
+				if (controllable.equals("all"))
+				{
+					existingControllableList.clear();
+				}
+				else
+				{
+					//it is necessary to control if in the list there is already a "all" value: if we are trying to set a value for a single controllable device but there is a "all" value the method return false to say that it is not possible
+					ArrayList<String> existingList = existingControllableList.get("all");
+					if (existingList != null)
+						return false;
+				}
+				// if the user has already subscribed other notifications, we have to
+				// copy them with the new one
+				// and then we insert the notification required only if it has not
+				// already been inserted
+				ArrayList<String> existingList = existingControllableList.get(controllable);
+				if (existingList != null)
+				{
+					if (existingList.contains("all"))
+					{
+						//it is necessary to control if in the list there is already a "all" value: if we are trying to set a single value but there is a "all" value the method return false to say that it is not possible
+						return false;
+					}
+					else
+					{
+						for (String notification : notificationsList)
+						{
+							if (notification.equals("all"))
+							{
+								//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+								existingList.clear();
+								existingList.add(notification);
+								break;
+							}
+							else
+							{
+								if (!existingList.contains((String) notification))
+									existingList.add(notification);
+							}
+						}
+						existingControllableList.put(controllable, existingList);
+					}
+				}
+				else
+				{
+					existingList = new ArrayList<String>();
+					for (String notification : notificationsList)
+					{
+						if (notification.equals("all"))
+						{
+							//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+							existingList.clear();
+							existingList.add(notification);
+							break;
+						}
+						else
+						{
+							if (!existingList.contains((String) notification))
+								existingList.add(notification);
+						}
+					}
+					existingControllableList.put(controllable, existingList);
+				}
 			}
+			else
+			{
+				existingControllableList = new HashMap<String, ArrayList<String>>();
+				ArrayList<String> newList = new ArrayList<String>();
+				for (String notification : notificationsList)
+				{
+					if (notification.equals("all"))
+					{
+						//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+						newList.clear();
+						newList.add(notification);
+						break;
+					}
+					else
+					{
+						if (!newList.contains((String) notification))
+							newList.add(notification);
+					}
+				}
+				existingControllableList.put(controllable, newList);
+			}
+			this.listOfNotificationsPerUser.put(clientId, existingControllableList);
+			result = true;
 		}
-		else
-			existingList = notificationsList;
-		this.listOfNotificationsPerUser.put(clientId, existingList);
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			result = false;
+		}
+		return result;
 	}
 	
 	/**
@@ -288,7 +375,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         subscribed by a user
 	 * 
 	 */
-	public ArrayList<String> getListOfNotificationsPerUser(String clientId)
+	public Map<String, ArrayList<String>> getListOfNotificationsAndControllablesPerUser(String clientId)
 	{
 		return this.listOfNotificationsPerUser.get(clientId);
 	}
@@ -300,18 +387,53 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param clientId
 	 *            the id of the user (it is the last part of the instance (after
 	 *            the @))
+	 * @param controllableToRemove
+	 *            the id of the device for which we want to unsubscribe the notifications
 	 * @param notificationToRemove
 	 *            the notification that has to be removed
 	 */
-	public void removeListOfNotificationsPerUser(String clientId, String notificationToRemove)
+	public boolean removeNotificationsFromListOfNotificationsPerControllableAndUser(String clientId, String controllableToRemove, String notificationToRemove)
 	{
-		ArrayList<String> existingList = this.listOfNotificationsPerUser.get(clientId);
-		if (existingList != null)
+		boolean result = false;
+		try
 		{
-			if (existingList.contains((String) notificationToRemove))
-				existingList.remove(existingList.indexOf((String) notificationToRemove));
+			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			if (existingControllableList != null)
+			{
+				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
+				if (existingList != null)
+				{
+					if (notificationToRemove.equals("all") && (!controllableToRemove.equals("all")))
+					{
+						existingControllableList.remove(controllableToRemove);
+					}
+					else if (notificationToRemove.equals("all") && (controllableToRemove.equals("all")))
+					{
+						existingControllableList.clear();
+					}
+					else if (!(notificationToRemove.equals("all")) && (controllableToRemove.equals("all")))
+					{
+						existingList.clear();
+					}
+					else
+					{
+						if (existingList.contains((String) notificationToRemove))
+						{
+							existingList.remove(existingList.indexOf((String) notificationToRemove));
+							result = true;
+						}
+					}
+				}
+			}
 		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			result = false;
+		}
+		return result;
 	}
+	
 	
 	/**
 	 * Get the classLoader needed to invoke methods It is necessary because the
