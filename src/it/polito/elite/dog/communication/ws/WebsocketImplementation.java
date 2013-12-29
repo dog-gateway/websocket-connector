@@ -25,7 +25,6 @@ import java.util.Map;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
@@ -163,6 +162,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			catch (IOException e)
 			{
 				e.printStackTrace();
+				// if something goes wrong we remove the user from the list of users
+				// connected to the server
+				websocketEndPoint.removeUser(this);
 			}
 		}
 	}
@@ -447,7 +449,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if we receive only one single notification we can call directly
 			// the method that does the unregistration
-			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+			if (websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 					controllable, (String) notifications))
 				result = "Unregistration completed successfully";
 		}
@@ -461,7 +463,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
-				if (!websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+				if (!websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 						controllable, (String) current.getTextValue()))
 					result = "Unregistration failed";
 			}
@@ -470,7 +472,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if the notification list is empty the user wants to unsubscribe
 			// all the notifications
-			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+			if (websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 					controllable, "all"))
 				result = "Unregistration completed successfully";
 		}

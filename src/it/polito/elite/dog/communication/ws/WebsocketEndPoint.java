@@ -348,6 +348,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 									existingList.add(notification);
 							}
 						}
+						//TODO forse qui devi mettere un 
+						// if (!existingList.isEmpty())
 						existingControllableList.put(controllable, existingList);
 					}
 				}
@@ -373,6 +375,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								existingList.add(notification);
 						}
 					}
+					//TODO forse qui devi mettere un 
+					// if (!existingList.isEmpty())
 					existingControllableList.put(controllable, existingList);
 				}
 			}
@@ -398,6 +402,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							newList.add(notification);
 					}
 				}
+				//TODO forse qui devi mettere un 
+				// if (!existingList.isEmpty())
 				existingControllableList.put(controllable, newList);
 			}
 			this.listOfNotificationsPerUser.put(clientId, existingControllableList);
@@ -439,7 +445,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param notificationToRemove
 	 *            the notification that has to be removed
 	 */
-	public boolean removeNotificationsFromListOfNotificationsPerControllableAndUser(String clientId,
+	public boolean removeNotificationFromListOfNotificationsPerControllableAndUser(String clientId,
 			String controllableToRemove, String notificationToRemove)
 	{
 		boolean result = false;
@@ -467,13 +473,19 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
 						{
 							result = existingList.remove(notificationToRemove);
+							// if the list is empty we remove completly the record
+							if (existingList.isEmpty())
+								existingControllableList.remove(controllableToRemove);
 						}
 						// if the controllable to remove is different from "all"
 						// but we want to remove all the notifications about it,
 						// we can simply remove its list of notifications
 						else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
 						{
-							result = existingControllableList.remove(controllableToRemove) != null;
+							existingControllableList.remove(controllableToRemove);
+							//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
+							result = true;
+							
 						}
 						else
 						{
@@ -482,7 +494,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							// value from the list
 							if (existingList.contains((String) notificationToRemove))
 							{
-								result = existingList.remove(existingList.indexOf((String) notificationToRemove)) != null;
+								existingList.remove(existingList.indexOf((String) notificationToRemove));
+								// if the list is empty we remove completly the record
+								if (existingList.isEmpty())
+									existingControllableList.remove(controllableToRemove);
+								//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
+								result = true;
 							}
 						}
 					}
@@ -492,14 +509,28 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					// have to scroll down all the list of controllables
 					else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
 					{
+						//TODO controlla se questo metodo fa quello che dovrebbe fare
+						Map<String, ArrayList<String>> existingControllableListOld = existingControllableList;
+						
 						Collection<String> allExistingKeys = existingControllableList.keySet();
 						if (!allExistingKeys.isEmpty())
 						{
 							result = true;
 							for (String singleKey : allExistingKeys)
 							{
-								if (!(existingControllableList.get(singleKey).remove(controllableToRemove)))
+								if (!(existingControllableList.get(singleKey).remove(notificationToRemove)))
+								{
 									result = false;
+									//if something went wrong we have to restore the list (we have to bring it back to the point at which it was before the modification
+									//TODO controlla che questa istruzione faccia quello che vuoi
+									existingControllableList = existingControllableListOld;
+									break;
+								}
+
+								//TODO controlla se ciò che c'è qui sotto funziona
+								// if the list is empty we remove completly the record
+								if (existingControllableList.get(singleKey).isEmpty())
+									existingControllableList.remove(singleKey);
 							}
 						}
 					}
