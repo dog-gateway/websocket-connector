@@ -5,6 +5,7 @@ import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
@@ -255,41 +256,76 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the id of a user (it is the last part of the instance (after
 	 *            the @))
 	 * @param controllable
-	 *            the id of the device for which we want to subscribe the notifications
+	 *            the id of the device for which we want to subscribe the
+	 *            notifications
 	 * @param notificationsList
 	 *            the list of notification that has to be subscribed
 	 */
-	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable, ArrayList<String> notificationsList)
+	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
+			ArrayList<String> notificationsList)
 	{
 		boolean result = false;
 		try
 		{
 			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
-			if (existingControllableList != null)
+			result = true;
+			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
-				//if the user ask to subscribe the notifications for all the devices, it is not necessary to store the name of all the notifications already stored
+				// if the user has already subscribed other notifications, we
+				// have to
+				// copy them with the new one
+				// and then we insert the notification required only if it has
+				// not
+				// already been inserted
+				ArrayList<String> existingList = existingControllableList.get(controllable);
+				
+				// if the user asks to subscribe the notifications for all the
+				// devices, it is not necessary to store the name of all the
+				// notifications already stored
 				if (controllable.equals("all"))
 				{
-					existingControllableList.clear();
+					if (notificationsList.contains("all"))
+					{
+						existingControllableList.clear();
+					}
+					else
+					{
+						// if in the list doesn't exist an "all" element, but
+						// exist other elements, we cannot modify it (if for
+						// example there is a controllable device with one or
+						// more notifications enabled (not all) and we try to
+						// submit some notifications for all the devices, it
+						// return false)
+						ArrayList<String> existingListAll = existingControllableList.get("all");
+						if (existingListAll == null || existingListAll.isEmpty())
+						{
+							return false;
+						}
+						
+					}
 				}
 				else
 				{
-					//it is necessary to control if in the list there is already a "all" value: if we are trying to set a value for a single controllable device but there is a "all" value the method return false to say that it is not possible
-					ArrayList<String> existingList = existingControllableList.get("all");
-					if (existingList != null)
+					// it is necessary to control if in the list there is
+					// already a "all" value: if we are trying to set a value
+					// for a single controllable device but there is a "all"
+					// value the method return false to say that it is not
+					// possible
+					if (existingControllableList.get("all") != null)
 						return false;
 				}
-				// if the user has already subscribed other notifications, we have to
-				// copy them with the new one
-				// and then we insert the notification required only if it has not
-				// already been inserted
-				ArrayList<String> existingList = existingControllableList.get(controllable);
 				if (existingList != null)
 				{
 					if (existingList.contains("all"))
 					{
-						//it is necessary to control if in the list there is already a "all" value: if we are trying to set a single value but there is a "all" value the method return false to say that it is not possible
-						return false;
+						// it is necessary to control if in the list there is
+						// already a "all" value: if we are trying to set a
+						// single value but there is a "all" value the method
+						// return false to say that it is not possible
+						result = false;
+						existingList.clear();
+						existingList.add("all");
+						existingControllableList.put(controllable, existingList);
 					}
 					else
 					{
@@ -297,7 +333,11 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						{
 							if (notification.equals("all"))
 							{
-								//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+								// clear the list and add the value "all": if
+								// the user ask to check all the notifications
+								// it is necessary to delete all the list of
+								// notification, otherwise we would have
+								// problems to unsubscribe in another moment
 								existingList.clear();
 								existingList.add(notification);
 								break;
@@ -318,7 +358,11 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					{
 						if (notification.equals("all"))
 						{
-							//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+							// clear the list and add the value "all": if the
+							// user ask to check all the notifications it is
+							// necessary to delete all the list of notification,
+							// otherwise we would have problems to unsubscribe
+							// in another moment
 							existingList.clear();
 							existingList.add(notification);
 							break;
@@ -340,7 +384,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 				{
 					if (notification.equals("all"))
 					{
-						//clear the list and add the value "all": if the user ask to check all the notifications it is necessary to delete all the list of notification, otherwise we would have problems to unsubscribe in another moment 
+						// clear the list and add the value "all": if the user
+						// ask to check all the notifications it is necessary to
+						// delete all the list of notification, otherwise we
+						// would have problems to unsubscribe in another moment
 						newList.clear();
 						newList.add(notification);
 						break;
@@ -354,7 +401,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 				existingControllableList.put(controllable, newList);
 			}
 			this.listOfNotificationsPerUser.put(clientId, existingControllableList);
-			result = true;
 		}
 		catch (Exception e)
 		{
@@ -388,11 +434,13 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the id of the user (it is the last part of the instance (after
 	 *            the @))
 	 * @param controllableToRemove
-	 *            the id of the device for which we want to unsubscribe the notifications
+	 *            the id of the device for which we want to unsubscribe the
+	 *            notifications
 	 * @param notificationToRemove
 	 *            the notification that has to be removed
 	 */
-	public boolean removeNotificationsFromListOfNotificationsPerControllableAndUser(String clientId, String controllableToRemove, String notificationToRemove)
+	public boolean removeNotificationsFromListOfNotificationsPerControllableAndUser(String clientId,
+			String controllableToRemove, String notificationToRemove)
 	{
 		boolean result = false;
 		try
@@ -400,27 +448,59 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			if (existingControllableList != null)
 			{
-				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
-				if (existingList != null)
+				if (!existingControllableList.isEmpty())
 				{
-					if (notificationToRemove.equals("all") && (!controllableToRemove.equals("all")))
+					ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
+					if (existingList != null)
 					{
-						existingControllableList.remove(controllableToRemove);
-					}
-					else if (notificationToRemove.equals("all") && (controllableToRemove.equals("all")))
-					{
-						existingControllableList.clear();
-					}
-					else if (!(notificationToRemove.equals("all")) && (controllableToRemove.equals("all")))
-					{
-						existingList.clear();
-					}
-					else
-					{
-						if (existingList.contains((String) notificationToRemove))
+						// if we want to remove all the notifications of all the
+						// controllables we can simply clear all the list
+						if ((controllableToRemove.equals("all") && notificationToRemove.equals("all")))
 						{
-							existingList.remove(existingList.indexOf((String) notificationToRemove));
+							existingControllableList.clear();
 							result = true;
+						}
+						// if existingList != null and controllableToRemove =
+						// "all" it means that in the list of controllables
+						// there is only "all", so we can simply remove the
+						// value from the list addresses at "all"
+						else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
+						{
+							result = existingList.remove(notificationToRemove);
+						}
+						// if the controllable to remove is different from "all"
+						// but we want to remove all the notifications about it,
+						// we can simply remove its list of notifications
+						else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
+						{
+							result = existingControllableList.remove(controllableToRemove) != null;
+						}
+						else
+						{
+							// if both the controllable and the notification to
+							// remove are not "all" we have to remove a single
+							// value from the list
+							if (existingList.contains((String) notificationToRemove))
+							{
+								result = existingList.remove(existingList.indexOf((String) notificationToRemove)) != null;
+							}
+						}
+					}
+					// if there isn't an "all" value in the list of
+					// controllables, but the command says us to remove a
+					// particular notification from all the controllables we
+					// have to scroll down all the list of controllables
+					else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
+					{
+						Collection<String> allExistingKeys = existingControllableList.keySet();
+						if (!allExistingKeys.isEmpty())
+						{
+							result = true;
+							for (String singleKey : allExistingKeys)
+							{
+								if (!(existingControllableList.get(singleKey).remove(controllableToRemove)))
+									result = false;
+							}
 						}
 					}
 				}
@@ -433,7 +513,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		return result;
 	}
-	
 	
 	/**
 	 * Get the classLoader needed to invoke methods It is necessary because the

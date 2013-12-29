@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
@@ -242,12 +243,26 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						{
 							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
 							jsonResult.setResult("Something went wrong");
-							//TODO controllare che non possano esserci risposte vuote
+							// TODO controllare che non possano esserci risposte vuote
 							result = this.mapper.writeValueAsString(jsonResult);
 						}
-						Object resultObject = this.mapper.readTree(result);
+						Object resultObject;
+						// if the result is not a json object the readTree
+						// method generates an exception that we intercept to
+						// insert the result as string in the answer
+						try
+						{
+							resultObject = this.mapper.readTree(result);
+						}
+						catch (Exception e)
+						{
+							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+							jsonResult.setResult(result);
+							result = this.mapper.writeValueAsString(jsonResult);
+							resultObject = this.mapper.readTree(result);
+						}
 						jsonResponse.setResponse(resultObject);
-							
+						
 						String response = this.mapper.writeValueAsString(jsonResponse);
 						// send the message just created
 						this.connectionInstance.connection.sendMessage(response);
@@ -362,20 +377,25 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						{
 							// here we send the notification only to the users
 							// that have submitted to receive the kind of
-							// notification just received for the device that sends it
+							// notification just received for the device that
+							// sends it
 							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
-							listOfControllable = websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user.toString()
-									.substring(user.toString().indexOf("@") + 1));
+							listOfControllable = websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user
+									.toString().substring(user.toString().indexOf("@") + 1));
 							if (listOfControllable != null && (!notificationContent.get("deviceUri").isEmpty()))
 							{
-								ArrayList<String> listOfNotification = listOfControllable.get((String) notificationContent.get("deviceUri"));
+								ArrayList<String> listOfNotification = listOfControllable
+										.get((String) notificationContent.get("deviceUri"));
 								if (listOfNotification == null)
 								{
 									listOfNotification = listOfControllable.get("all");
 								}
-								if (listOfNotification != null && (listOfNotification.contains(eventName.toString()) || listOfNotification.contains("all")))
+								if (listOfNotification != null
+										&& (listOfNotification.contains(eventName.toString()) || listOfNotification
+												.contains("all")))
 								{
-									// transform the notification in Json format,
+									// transform the notification in Json
+									// format,
 									// with clienId, messageType, type
 									notificationResponse.setNotification(notificationContent);
 									notificationResponse.setClientId(user.toString().substring(
@@ -407,9 +427,19 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 *            List of notifications from which the user want to be
 	 *            unsubscribed
 	 */
-	public String notificationUnregistration(String clientId, String controllable, Object notifications) throws JsonParseException,
-			JsonMappingException
+	public String notificationUnregistration(String clientId, String controllable, Object notificationsAcquired)
+			throws JsonParseException, JsonMappingException
 	{
+
+		Object notifications;
+		try
+		{
+			notifications = this.mapper.readTree((String) notificationsAcquired);
+		}
+		catch (Exception e)
+		{
+			notifications = notificationsAcquired;
+		}
 		String result = "Unregistration failed";
 		// The notifications could be a simple string (only one notification) or
 		// a list of element
@@ -417,7 +447,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if we receive only one single notification we can call directly
 			// the method that does the unregistration
-			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, (String) notifications))
+			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+					controllable, (String) notifications))
 				result = "Unregistration completed successfully";
 		}
 		else if (notifications instanceof ArrayNode)
@@ -430,16 +461,20 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
-				if (!websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, (String) current.getTextValue()))
+				if (!websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+						controllable, (String) current.getTextValue()))
 					result = "Unregistration failed";
 			}
 		}
 		else
 		{
-			//if the notification list is empty the user wants to unsubscribe all the notifications
-			websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId, controllable, "all");
+			// if the notification list is empty the user wants to unsubscribe
+			// all the notifications
+			if (websocketEndPoint.removeNotificationsFromListOfNotificationsPerControllableAndUser(clientId,
+					controllable, "all"))
+				result = "Unregistration completed successfully";
 		}
-
+		
 		try
 		{
 			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
@@ -449,14 +484,14 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		catch (Exception e)
 		{
 			e.printStackTrace();
-			return 	"{\"result\":\""+result+"\"}";
+			return "{\"result\":\"" + result + "\"}";
 		}
 	}
 	
-
 	@PUT
 	@Path("/api/devices/notifications")
-	public String notificationRegistrationWithoutControllable(Object notifications) throws JsonParseException, JsonMappingException
+	public String notificationRegistrationWithoutControllable(Object notifications) throws JsonParseException,
+			JsonMappingException
 	{
 		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
@@ -466,25 +501,25 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, "all", notifications);
 		}
-
+		
 		try
 		{
 			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-			jsonResult.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
+			jsonResult
+					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
-			return 	"{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
+			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
 		}
 	}
 	
-
-
 	@PUT
 	@Path("/api/devices/{controllable}/notifications")
-	public String notificationRegistrationWithControllable(@PathParam("controllable") String controllable, Object notifications) throws JsonParseException, JsonMappingException
+	public String notificationRegistrationWithControllable(@PathParam("controllable") String controllable,
+			Object notifications) throws JsonParseException, JsonMappingException
 	{
 		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
@@ -494,17 +529,18 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, controllable, notifications);
 		}
-
+		
 		try
 		{
 			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-			jsonResult.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
+			jsonResult
+					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
-			return 	"{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
+			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
 		}
 	}
 	
@@ -514,23 +550,36 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 * @param clientId
 	 *            Id of the client that is requiring the subscription
 	 * @param controllable
-	 *            the id of the device for which we want to subscribe the notifications
+	 *            the id of the device for which we want to subscribe the
+	 *            notifications
 	 * @param notifications
 	 *            List of notifications from which the user want to be
 	 *            subscribed
 	 */
-	public String notificationRegistration(String clientId, String controllable, Object notifications) throws JsonParseException, JsonMappingException
+	public String notificationRegistration(String clientId, String controllable, Object notificationsAcquired)
+			throws JsonParseException, JsonMappingException
 	{
 		String result = "Registration failed";
+		Object notifications;
+		try
+		{
+			notifications = this.mapper.readTree((String) notificationsAcquired);
+		}
+		catch (Exception e)
+		{
+			notifications = notificationsAcquired;
+		}
 		try
 		{
 			// list of notification that has to be subscribed
 			ArrayList<String> notificationsList = new ArrayList<String>();
-			// we insert each notification only once, so if the user send the same
+			// we insert each notification only once, so if the user send the
+			// same
 			// notification name twice (or more) we insert only one
 			if (notifications instanceof String)
 			{
-				// if we receive only one single notification we can add it directly
+				// if we receive only one single notification we can add it
+				// directly
 				// to the list of notifications
 				// but we do it only if the user has never subscribed the
 				// notification just received
@@ -540,7 +589,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			}
 			else if (notifications instanceof ArrayNode)
 			{
-				// scroll through all the items received and for each of them, if
+				// scroll through all the items received and for each of them,
+				// if
 				// the user has never subscribed it, we add the specific
 				// notification to the list of notifications
 				ArrayNode notificationsArrayNode = (ArrayNode) notifications;
@@ -552,14 +602,17 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						notificationsList.add(current.getTextValue());
 				}
 			}
-			//if the list is empty it means that the user wants to subscribe all the notifications
+			// if the list is empty it means that the user wants to subscribe
+			// all the notifications
 			if (notificationsList.isEmpty())
 			{
 				notificationsList.add("all");
 			}
-			// at the end of the process that chooses which notifications have to be
+			// at the end of the process that chooses which notifications have
+			// to be
 			// subscribed we can call the method that does the real subscription
-			if (websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable, notificationsList))
+			if (websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable,
+					notificationsList))
 				result = "Registration completed successfully";
 		}
 		catch (Exception e)
@@ -567,7 +620,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			e.printStackTrace();
 			result = "Registration failed";
 		}
-
+		
 		try
 		{
 			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
@@ -577,11 +630,10 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		catch (Exception e)
 		{
 			e.printStackTrace();
-			return 	"{\"result\":\""+result+"\"}";
+			return "{\"result\":\"" + result + "\"}";
 		}
 		
 	}
-	
 	
 	/**
 	 * @throws InvocationTargetException
@@ -929,9 +981,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 									resultMessage = "Command execution failed";
 							}
 							// we send the result as Json
-								WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-								jsonResult.setResult(resultMessage);
-								return this.mapper.writeValueAsString(jsonResult);
+							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+							jsonResult.setResult(resultMessage);
+							return this.mapper.writeValueAsString(jsonResult);
 						}
 					}
 					if (clazz.equals(this.getClass()))
