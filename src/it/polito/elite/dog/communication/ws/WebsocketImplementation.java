@@ -142,8 +142,10 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	@Override
 	public void onOpen(Connection connection)
 	{
+	    connection.setMaxIdleTime(Integer.MAX_VALUE);
 		// init the connection
 		this.connection = connection;
+
 		// add the user to the list of users connected to the system
 		websocketEndPoint.addUser(this);
 		this.logger.log(LogService.LOG_INFO, "Connection Protocol: " + connection.getProtocol());
@@ -382,8 +384,15 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							// notification just received for the device that
 							// sends it
 							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
-							listOfControllable = websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user
-									.toString().substring(user.toString().indexOf("@") + 1));
+							try
+							{
+								listOfControllable.putAll(websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user
+										.toString().substring(user.toString().indexOf("@") + 1)));
+							}
+							catch (Exception e)
+							{
+								// if the list is null it has to continue without copying the list
+							}
 							if (listOfControllable != null && (!notificationContent.get("deviceUri").isEmpty()))
 							{
 								ArrayList<String> listOfNotification = listOfControllable
@@ -460,12 +469,27 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
 			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
 			result = "Unregistration completed successfully";
+			//we save a backup of the list because if something will go wrong we will set the variable with the old value
+			Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserbackup = new HashMap<String, Map<String, ArrayList<String>>> ();
+			try
+			{
+				listOfNotificationsPerUserbackup.putAll(websocketEndPoint.getListOfNotificationsAndControllables());
+			}
+			catch (Exception e)
+			{
+				// if the list is null it has to continue without copying the list
+			}
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
 				if (!websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 						controllable, (String) current.getTextValue()))
+				{
 					result = "Unregistration failed";
+					//if something went wrong we have to stop the process of unregistration and restore the old value of listOfNotifications
+					websocketEndPoint.setListOfNotificationsAndControllables(listOfNotificationsPerUserbackup);
+					break;
+				}
 			}
 		}
 		else

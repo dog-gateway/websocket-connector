@@ -264,10 +264,28 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
 			ArrayList<String> notificationsList)
 	{
+		//we save a backup of the list because if something will go wrong we will set the variable with the old value
+		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>> ();
+		try
+		{
+			listOfNotificationsPerUserBackup.putAll(this.listOfNotificationsPerUser);
+		}
+		catch (Exception e1)
+		{
+			// if the list is null it has to continue without copying the list
+		}
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			Map<String, ArrayList<String>> existingControllableList = new HashMap<String, ArrayList<String>> ();
+			try
+			{
+				existingControllableList.putAll(this.listOfNotificationsPerUser.get(clientId));
+			}
+			catch (Exception e2)
+			{
+				// if the list is null it has to continue without copying the list
+			}
 			result = true;
 			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
@@ -299,6 +317,15 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						ArrayList<String> existingListAll = existingControllableList.get("all");
 						if (existingListAll == null || existingListAll.isEmpty())
 						{
+							// if something will go wrong we will set the variable with the old value
+							try
+							{
+								this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+							}
+							catch (Exception e)
+							{
+								// if the list is null it has to continue without copying the list
+							}
 							return false;
 						}
 						
@@ -312,7 +339,18 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					// value the method return false to say that it is not
 					// possible
 					if (existingControllableList.get("all") != null)
+					{
+						// if something will go wrong we will set the variable with the old value
+						try
+						{
+							this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+						}
+						catch (Exception e)
+						{
+							// if the list is null it has to continue without copying the list
+						}
 						return false;
+					}
 				}
 				if (existingList != null)
 				{
@@ -339,13 +377,17 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								// notification, otherwise we would have
 								// problems to unsubscribe in another moment
 								existingList.clear();
-								existingList.add(notification);
+								if (!existingList.add(notification))
+									result = false;
 								break;
 							}
 							else
 							{
 								if (!existingList.contains((String) notification))
-									existingList.add(notification);
+								{
+									if (!(existingList.add(notification)))
+										result = false;
+								}
 							}
 						}
 						//TODO forse qui devi mettere un 
@@ -413,6 +455,18 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			e.printStackTrace();
 			result = false;
 		}
+		// if something will go wrong we will set the variable with the old value
+		if (!result)
+		{
+			try
+			{
+				this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+			}
+			catch (Exception e)
+			{
+				// if the list is null it has to continue without copying the list
+			}
+		}
 		return result;
 	}
 	
@@ -432,6 +486,39 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		return this.listOfNotificationsPerUser.get(clientId);
 	}
 	
+
+	/**
+	 * Get the entire list of all the notifications subscribed
+	 * 
+	 * @return a {ArrayList<String>} object with all the notifications
+	 *         subscribed by a user
+	 * 
+	 */
+	public Map<String, Map<String, ArrayList<String>>> getListOfNotificationsAndControllables()
+	{
+		return this.listOfNotificationsPerUser;
+	}
+	
+	
+
+	/**
+	 * Get the entire list of all the notifications subscribed
+	 * 
+	 * @return a {ArrayList<String>} object with all the notifications
+	 *         subscribed by a user
+	 * 
+	 */
+	public void setListOfNotificationsAndControllables(Map<String, Map<String, ArrayList<String>>> oldList)
+	{
+		try
+		{
+			this.listOfNotificationsPerUser.putAll(oldList);
+		}
+		catch (Exception e)
+		{
+			// if the list is null it has to continue without copying the list
+		}
+	}
 	/**
 	 * Remove a notification subscribed from the list of the notifications
 	 * subscribed by a user
@@ -448,90 +535,120 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public boolean removeNotificationFromListOfNotificationsPerControllableAndUser(String clientId,
 			String controllableToRemove, String notificationToRemove)
 	{
+		//we save a backup of the list because if something will go wrong we will set the variable with the old value
+		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>>();
+		try
+		{
+			listOfNotificationsPerUserBackup.putAll(this.listOfNotificationsPerUser);
+		}
+		catch (Exception e1)
+		{
+			// if the list is null it has to continue without copying the list
+		}
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
-			if (existingControllableList != null)
+			Map<String, ArrayList<String>> existingControllableList = new HashMap<String, ArrayList<String>> ();
+			try
 			{
-				if (!existingControllableList.isEmpty())
+				existingControllableList.putAll(this.listOfNotificationsPerUser.get(clientId));
+			}
+			catch (Exception e)
+			{
+				// if the list is null it has to continue without copying the list
+			}
+			if ((existingControllableList != null) && !existingControllableList.isEmpty())
+			{
+				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
+				if (existingList != null)
 				{
-					ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
-					if (existingList != null)
+					// if we want to remove all the notifications of all the
+					// controllables we can simply clear all the list
+					if ((controllableToRemove.equals("all") && notificationToRemove.equals("all")))
 					{
-						// if we want to remove all the notifications of all the
-						// controllables we can simply clear all the list
-						if ((controllableToRemove.equals("all") && notificationToRemove.equals("all")))
+						existingControllableList.clear();
+						result = true;
+					}
+					// if existingList != null and controllableToRemove =
+					// "all" it means that in the list of controllables
+					// there is only "all", so we can simply remove the
+					// value from the list addresses at "all"
+					else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
+					{
+						result = existingList.remove(notificationToRemove);
+						// if the list is empty we remove completly the record
+						if (existingList.isEmpty())
+							existingControllableList.remove(controllableToRemove);
+					}
+					// if the controllable to remove is different from "all"
+					// but we want to remove all the notifications about it,
+					// we can simply remove its list of notifications
+					else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
+					{
+						existingControllableList.remove(controllableToRemove);
+						//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
+						result = true;
+						
+					}
+					else
+					{
+						// if both the controllable and the notification to
+						// remove are not "all" we have to remove a single
+						// value from the list
+						if (existingList.contains((String) notificationToRemove))
 						{
-							existingControllableList.clear();
-							result = true;
-						}
-						// if existingList != null and controllableToRemove =
-						// "all" it means that in the list of controllables
-						// there is only "all", so we can simply remove the
-						// value from the list addresses at "all"
-						else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
-						{
-							result = existingList.remove(notificationToRemove);
+							existingList.remove(existingList.indexOf((String) notificationToRemove));
 							// if the list is empty we remove completly the record
 							if (existingList.isEmpty())
 								existingControllableList.remove(controllableToRemove);
-						}
-						// if the controllable to remove is different from "all"
-						// but we want to remove all the notifications about it,
-						// we can simply remove its list of notifications
-						else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
-						{
-							existingControllableList.remove(controllableToRemove);
 							//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
 							result = true;
-							
-						}
-						else
-						{
-							// if both the controllable and the notification to
-							// remove are not "all" we have to remove a single
-							// value from the list
-							if (existingList.contains((String) notificationToRemove))
-							{
-								existingList.remove(existingList.indexOf((String) notificationToRemove));
-								// if the list is empty we remove completly the record
-								if (existingList.isEmpty())
-									existingControllableList.remove(controllableToRemove);
-								//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
-								result = true;
-							}
 						}
 					}
-					// if there isn't an "all" value in the list of
-					// controllables, but the command says us to remove a
-					// particular notification from all the controllables we
-					// have to scroll down all the list of controllables
-					else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
+				}
+				// if there isn't an "all" value in the list of
+				// controllables, but the command says us to remove a
+				// particular notification from all the controllables we
+				// have to scroll down all the list of controllables
+				else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
+				{
+					//TODO controlla se questo metodo fa quello che dovrebbe fare
+					Map<String, ArrayList<String>> existingControllableListOld = new HashMap<String, ArrayList<String>>();
+					try
 					{
-						//TODO controlla se questo metodo fa quello che dovrebbe fare
-						Map<String, ArrayList<String>> existingControllableListOld = existingControllableList;
-						
-						Collection<String> allExistingKeys = existingControllableList.keySet();
-						if (!allExistingKeys.isEmpty())
+						existingControllableListOld.putAll(existingControllableList);
+					}
+					catch (Exception e)
+					{
+						// if the list is null it has to continue without copying the list
+					}
+					
+					Collection<String> allExistingKeys = existingControllableList.keySet();
+					if (!allExistingKeys.isEmpty())
+					{
+						result = true;
+						for (String singleKey : allExistingKeys)
 						{
-							result = true;
-							for (String singleKey : allExistingKeys)
+							if (!(existingControllableList.get(singleKey).remove(notificationToRemove)))
 							{
-								if (!(existingControllableList.get(singleKey).remove(notificationToRemove)))
+								result = false;
+								//if something went wrong we have to restore the list (we have to bring it back to the point at which it was before the modification
+								//TODO controlla che questa istruzione faccia quello che vuoi
+								try
 								{
-									result = false;
-									//if something went wrong we have to restore the list (we have to bring it back to the point at which it was before the modification
-									//TODO controlla che questa istruzione faccia quello che vuoi
-									existingControllableList = existingControllableListOld;
-									break;
+									existingControllableList.putAll(existingControllableListOld);
 								}
-
-								//TODO controlla se ciò che c'è qui sotto funziona
-								// if the list is empty we remove completly the record
-								if (existingControllableList.get(singleKey).isEmpty())
-									existingControllableList.remove(singleKey);
+								catch (Exception e)
+								{
+									// if the list is null it has to continue without copying the list
+								}
+								break;
 							}
+
+							//TODO controlla se ciò che c'è qui sotto funziona
+							// if the list is empty we remove completly the record
+							if (existingControllableList.get(singleKey).isEmpty())
+								existingControllableList.remove(singleKey);
 						}
 					}
 				}
@@ -541,6 +658,18 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		{
 			e.printStackTrace();
 			result = false;
+		}
+		// if something will go wrong we will set the variable with the old value
+		if (!result)
+		{
+			try
+			{
+				this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+			}
+			catch (Exception e)
+			{
+				// if the list is null it has to continue without copying the list
+			}
 		}
 		return result;
 	}
