@@ -21,8 +21,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -383,7 +381,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							// that have submitted to receive the kind of
 							// notification just received for the device that
 							// sends it
-							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
+							HashMap<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
 							try
 							{
 								listOfControllable.putAll(websocketEndPoint.getListOfNotificationsAndControllablesPerUser(user
@@ -441,6 +439,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	public String notificationUnregistration(String clientId, String controllable, Object notificationsAcquired)
 			throws JsonParseException, JsonMappingException
 	{
+		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
+		listOfNotificationsPerUserBackup = websocketEndPoint.copyHashMapByValue(websocketEndPoint.getListOfNotificationsAndControllables());
+		
 		Object notifications;
 		try
 		{
@@ -451,7 +452,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			notifications = notificationsAcquired;
 		}
 		String result = "Unregistration failed";
-		String multipleUnregistrationResult ="";
 		// The notifications could be a simple string (only one notification) or
 		// a list of element
 		if (notifications instanceof String)
@@ -468,45 +468,19 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// call the method that does the unregistration
 			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
 			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
-			ArrayList<String> failedUnregistrations = new ArrayList<String>();
-			ArrayList<String> succededUnregistrations = new ArrayList<String>();
-			result ="";
+			result ="Unregistration completed successfully";
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
 				if (!websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 						controllable, (String) current.getTextValue()))
 				{
-					failedUnregistrations.add((String) current.getTextValue());
-				}
-				else
-				{
-					succededUnregistrations.add((String) current.getTextValue());
-				}
-			}
-
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-			if (!failedUnregistrations.isEmpty() || !succededUnregistrations.isEmpty())
-			{
-				if (!failedUnregistrations.isEmpty())
-					jsonResult.setFailedUnregistrations(failedUnregistrations);
-				if (!succededUnregistrations.isEmpty())
-					jsonResult.setSuccededUnregistrations(succededUnregistrations);
-
-				try
-				{
-					multipleUnregistrationResult = this.mapper.writeValueAsString(jsonResult);
-				}
-				catch (IOException e)
-				{
-					e.printStackTrace();
+					//if something goes wrong we reset the value copying the list backed up at the beginning of the unregistration process
+					websocketEndPoint.setListOfNotificationsAndControllables(websocketEndPoint.copyHashMapByValue(listOfNotificationsPerUserBackup));
+					result = "Unregistration failed";
+					break;
 				}
 			}
-			else
-			{
-				result = "Unregistration failed";
-			}
-			
 		}
 		else
 		{
@@ -519,31 +493,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		
 		try
 		{
-			if (!result.isEmpty())
-			{
-				//the user asked to remove only one notification
 				WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
 				jsonResult.setResult(result);
 				return this.mapper.writeValueAsString(jsonResult);
-			}
-			else
-			{
-				Object unregistrationResults;
-				// if the multipleUnregistrationResult is not a json object the readTree method generates an exception that we intercept to insert the result as string in the answer
-				try
-				{
-					unregistrationResults = this.mapper.readTree(multipleUnregistrationResult);
-					WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-					jsonResult.setUnregistrationResults(unregistrationResults);
-					return this.mapper.writeValueAsString(jsonResult);
-				}
-				catch (Exception e)
-				{
-					WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-					jsonResult.setResult(multipleUnregistrationResult);
-					return this.mapper.writeValueAsString(jsonResult);
-				}
-			}
 		}
 		catch (Exception e)
 		{

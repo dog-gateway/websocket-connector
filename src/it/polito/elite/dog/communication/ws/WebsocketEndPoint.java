@@ -9,7 +9,6 @@ import java.util.Collection;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.ServletException;
@@ -42,7 +41,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	// list of users (by instances)
 	private List<WebsocketImplementation> users;
 	// list of notifications per users
-	private Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUser;
+	private HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUser;
 	
 	// the service registration handle
 	private ServiceRegistration<?> serviceRegManagedService;
@@ -264,10 +263,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
 			ArrayList<String> notificationsList)
 	{
+		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
+		listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			HashMap<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			result = true;
 			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
@@ -419,6 +420,11 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			e.printStackTrace();
 			result = false;
 		}
+		if (!result)
+		{
+			this.listOfNotificationsPerUser.clear();
+			this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
+		}
 		return result;
 	}
 	
@@ -433,7 +439,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         subscribed by a user
 	 * 
 	 */
-	public Map<String, ArrayList<String>> getListOfNotificationsAndControllablesPerUser(String clientId)
+	public HashMap<String, ArrayList<String>> getListOfNotificationsAndControllablesPerUser(String clientId)
 	{
 		return this.listOfNotificationsPerUser.get(clientId);
 	}
@@ -446,7 +452,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         subscribed by a user
 	 * 
 	 */
-	public Map<String, Map<String, ArrayList<String>>> getListOfNotificationsAndControllables()
+	public HashMap<String, HashMap<String, ArrayList<String>>> getListOfNotificationsAndControllables()
 	{
 		return this.listOfNotificationsPerUser;
 	}
@@ -460,7 +466,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         subscribed by a user
 	 * 
 	 */
-	public void setListOfNotificationsAndControllables(Map<String, Map<String, ArrayList<String>>> oldList)
+	public void setListOfNotificationsAndControllables(HashMap<String, HashMap<String, ArrayList<String>>> oldList)
 	{
 		try
 		{
@@ -490,7 +496,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			HashMap<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			if ((existingControllableList != null) && !existingControllableList.isEmpty())
 			{
 				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
@@ -632,22 +638,28 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 	}
 	
-	public Map<String, Map<String, ArrayList<String>>> copyHashMapByValue(Map<String, Map<String, ArrayList<String>>> hashMapToCopy)
+	@SuppressWarnings("unchecked")
+	public HashMap<String, HashMap<String, ArrayList<String>>> copyHashMapByValue(HashMap<String, HashMap<String, ArrayList<String>>> hashMapToCopy)
 	{
-		Map<String, Map<String, ArrayList<String>>> newHashMap = new HashMap<String, Map<String, ArrayList<String>>>();
+		HashMap<String, HashMap<String, ArrayList<String>>> newHashMap = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		Collection<String> allExistingKeys = hashMapToCopy.keySet();
 		if (!allExistingKeys.isEmpty())
 		{
 			for (String singleKey : allExistingKeys)
 			{
-				Map<String, ArrayList<String>> newMap = new HashMap<String, ArrayList<String>>();
-				newMap.putAll(hashMapToCopy.get(singleKey));
-				newHashMap.put(singleKey, newMap);
+				HashMap<String, ArrayList<String>> newMap = new HashMap<String, ArrayList<String>>();
+				Collection<String> allExistingKeysInSecondMap = hashMapToCopy.get(singleKey).keySet();
+				if (!allExistingKeysInSecondMap.isEmpty())
+				{
+					for (String singleKeyInSecondMap : allExistingKeysInSecondMap)
+					{
+						newMap.put(singleKeyInSecondMap, (ArrayList<String>) hashMapToCopy.get(singleKey).get(singleKeyInSecondMap).clone());
+					}
+					newHashMap.put(singleKey,newMap);
+				}
 			}
-			return newHashMap;
 		}
-		else
-			return null;
+		return newHashMap;
 	}
 	
 }
