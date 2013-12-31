@@ -268,7 +268,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>> ();
 		try
 		{
-			listOfNotificationsPerUserBackup.putAll(this.listOfNotificationsPerUser);
+			listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
 		}
 		catch (Exception e1)
 		{
@@ -320,7 +320,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							// if something will go wrong we will set the variable with the old value
 							try
 							{
-								this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+								this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 							}
 							catch (Exception e)
 							{
@@ -343,7 +343,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						// if something will go wrong we will set the variable with the old value
 						try
 						{
-							this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+							this.listOfNotificationsPerUser= this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 						}
 						catch (Exception e)
 						{
@@ -460,7 +460,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		{
 			try
 			{
-				this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+				this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 			}
 			catch (Exception e)
 			{
@@ -512,7 +512,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		try
 		{
-			this.listOfNotificationsPerUser.putAll(oldList);
+			this.listOfNotificationsPerUser = this.copyHashMapByValue(oldList);
 		}
 		catch (Exception e)
 		{
@@ -539,7 +539,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>>();
 		try
 		{
-			listOfNotificationsPerUserBackup.putAll(this.listOfNotificationsPerUser);
+			listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
 		}
 		catch (Exception e1)
 		{
@@ -664,7 +664,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		{
 			try
 			{
-				this.listOfNotificationsPerUser.putAll(listOfNotificationsPerUserBackup);
+				this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 			}
 			catch (Exception e)
 			{
@@ -731,6 +731,24 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		// server because there is a default value
 		registerHttpServlet();
 		
+	}
+	
+	public Map<String, Map<String, ArrayList<String>>> copyHashMapByValue(Map<String, Map<String, ArrayList<String>>> hashMapToCopy)
+	{
+		Map<String, Map<String, ArrayList<String>>> newHashMap = new HashMap<String, Map<String, ArrayList<String>>>();
+		Collection<String> allExistingKeys = hashMapToCopy.keySet();
+		if (!allExistingKeys.isEmpty())
+		{
+			for (String singleKey : allExistingKeys)
+			{
+				Map<String, ArrayList<String>> newMap = new HashMap<String, ArrayList<String>>();
+				newMap.putAll(hashMapToCopy.get(singleKey));
+				newHashMap.put(singleKey, newMap);
+			}
+			return newHashMap;
+		}
+		else
+			return null;
 	}
 	
 }

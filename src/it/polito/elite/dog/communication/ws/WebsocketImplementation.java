@@ -473,7 +473,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserbackup = new HashMap<String, Map<String, ArrayList<String>>> ();
 			try
 			{
-				listOfNotificationsPerUserbackup.putAll(websocketEndPoint.getListOfNotificationsAndControllables());
+				listOfNotificationsPerUserbackup = websocketEndPoint.copyHashMapByValue(websocketEndPoint.getListOfNotificationsAndControllables());
 			}
 			catch (Exception e)
 			{
