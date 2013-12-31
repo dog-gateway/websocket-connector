@@ -264,28 +264,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
 			ArrayList<String> notificationsList)
 	{
-		//we save a backup of the list because if something will go wrong we will set the variable with the old value
-		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>> ();
-		try
-		{
-			listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
-		}
-		catch (Exception e1)
-		{
-			// if the list is null it has to continue without copying the list
-		}
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = new HashMap<String, ArrayList<String>> ();
-			try
-			{
-				existingControllableList.putAll(this.listOfNotificationsPerUser.get(clientId));
-			}
-			catch (Exception e2)
-			{
-				// if the list is null it has to continue without copying the list
-			}
+			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			result = true;
 			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
@@ -317,15 +299,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						ArrayList<String> existingListAll = existingControllableList.get("all");
 						if (existingListAll == null || existingListAll.isEmpty())
 						{
-							// if something will go wrong we will set the variable with the old value
-							try
-							{
-								this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
-							}
-							catch (Exception e)
-							{
-								// if the list is null it has to continue without copying the list
-							}
 							return false;
 						}
 						
@@ -340,15 +313,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					// possible
 					if (existingControllableList.get("all") != null)
 					{
-						// if something will go wrong we will set the variable with the old value
-						try
-						{
-							this.listOfNotificationsPerUser= this.copyHashMapByValue(listOfNotificationsPerUserBackup);
-						}
-						catch (Exception e)
-						{
-							// if the list is null it has to continue without copying the list
-						}
 						return false;
 					}
 				}
@@ -455,18 +419,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			e.printStackTrace();
 			result = false;
 		}
-		// if something will go wrong we will set the variable with the old value
-		if (!result)
-		{
-			try
-			{
-				this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
-			}
-			catch (Exception e)
-			{
-				// if the list is null it has to continue without copying the list
-			}
-		}
 		return result;
 	}
 	
@@ -535,28 +487,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public boolean removeNotificationFromListOfNotificationsPerControllableAndUser(String clientId,
 			String controllableToRemove, String notificationToRemove)
 	{
-		//we save a backup of the list because if something will go wrong we will set the variable with the old value
-		Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, Map<String, ArrayList<String>>>();
-		try
-		{
-			listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
-		}
-		catch (Exception e1)
-		{
-			// if the list is null it has to continue without copying the list
-		}
 		boolean result = false;
 		try
 		{
-			Map<String, ArrayList<String>> existingControllableList = new HashMap<String, ArrayList<String>> ();
-			try
-			{
-				existingControllableList.putAll(this.listOfNotificationsPerUser.get(clientId));
-			}
-			catch (Exception e)
-			{
-				// if the list is null it has to continue without copying the list
-			}
+			Map<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			if ((existingControllableList != null) && !existingControllableList.isEmpty())
 			{
 				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
@@ -612,17 +546,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 				// have to scroll down all the list of controllables
 				else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
 				{
-					//TODO controlla se questo metodo fa quello che dovrebbe fare
-					Map<String, ArrayList<String>> existingControllableListOld = new HashMap<String, ArrayList<String>>();
-					try
-					{
-						existingControllableListOld.putAll(existingControllableList);
-					}
-					catch (Exception e)
-					{
-						// if the list is null it has to continue without copying the list
-					}
-					
 					Collection<String> allExistingKeys = existingControllableList.keySet();
 					if (!allExistingKeys.isEmpty())
 					{
@@ -632,21 +555,9 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							if (!(existingControllableList.get(singleKey).remove(notificationToRemove)))
 							{
 								result = false;
-								//if something went wrong we have to restore the list (we have to bring it back to the point at which it was before the modification
-								//TODO controlla che questa istruzione faccia quello che vuoi
-								try
-								{
-									existingControllableList.putAll(existingControllableListOld);
-								}
-								catch (Exception e)
-								{
-									// if the list is null it has to continue without copying the list
-								}
 								break;
 							}
-
-							//TODO controlla se ciò che c'è qui sotto funziona
-							// if the list is empty we remove completly the record
+							// if the list is empty we remove completely the record
 							if (existingControllableList.get(singleKey).isEmpty())
 								existingControllableList.remove(singleKey);
 						}
@@ -658,18 +569,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		{
 			e.printStackTrace();
 			result = false;
-		}
-		// if something will go wrong we will set the variable with the old value
-		if (!result)
-		{
-			try
-			{
-				this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
-			}
-			catch (Exception e)
-			{
-				// if the list is null it has to continue without copying the list
-			}
 		}
 		return result;
 	}

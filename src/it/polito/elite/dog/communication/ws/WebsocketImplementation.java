@@ -441,7 +441,6 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	public String notificationUnregistration(String clientId, String controllable, Object notificationsAcquired)
 			throws JsonParseException, JsonMappingException
 	{
-
 		Object notifications;
 		try
 		{
@@ -452,6 +451,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			notifications = notificationsAcquired;
 		}
 		String result = "Unregistration failed";
+		String multipleUnregistrationResult ="";
 		// The notifications could be a simple string (only one notification) or
 		// a list of element
 		if (notifications instanceof String)
@@ -468,29 +468,45 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// call the method that does the unregistration
 			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
 			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
-			result = "Unregistration completed successfully";
-			//we save a backup of the list because if something will go wrong we will set the variable with the old value
-			Map<String, Map<String, ArrayList<String>>> listOfNotificationsPerUserbackup = new HashMap<String, Map<String, ArrayList<String>>> ();
-			try
-			{
-				listOfNotificationsPerUserbackup = websocketEndPoint.copyHashMapByValue(websocketEndPoint.getListOfNotificationsAndControllables());
-			}
-			catch (Exception e)
-			{
-				// if the list is null it has to continue without copying the list
-			}
+			ArrayList<String> failedUnregistrations = new ArrayList<String>();
+			ArrayList<String> succededUnregistrations = new ArrayList<String>();
+			result ="";
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
 				if (!websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 						controllable, (String) current.getTextValue()))
 				{
-					result = "Unregistration failed";
-					//if something went wrong we have to stop the process of unregistration and restore the old value of listOfNotifications
-					websocketEndPoint.setListOfNotificationsAndControllables(listOfNotificationsPerUserbackup);
-					break;
+					failedUnregistrations.add((String) current.getTextValue());
+				}
+				else
+				{
+					succededUnregistrations.add((String) current.getTextValue());
 				}
 			}
+
+			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+			if (!failedUnregistrations.isEmpty() || !succededUnregistrations.isEmpty())
+			{
+				if (!failedUnregistrations.isEmpty())
+					jsonResult.setFailedUnregistrations(failedUnregistrations);
+				if (!succededUnregistrations.isEmpty())
+					jsonResult.setSuccededUnregistrations(succededUnregistrations);
+
+				try
+				{
+					multipleUnregistrationResult = this.mapper.writeValueAsString(jsonResult);
+				}
+				catch (IOException e)
+				{
+					e.printStackTrace();
+				}
+			}
+			else
+			{
+				result = "Unregistration failed";
+			}
+			
 		}
 		else
 		{
@@ -503,9 +519,31 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		
 		try
 		{
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
-			jsonResult.setResult(result);
-			return this.mapper.writeValueAsString(jsonResult);
+			if (!result.isEmpty())
+			{
+				//the user asked to remove only one notification
+				WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+				jsonResult.setResult(result);
+				return this.mapper.writeValueAsString(jsonResult);
+			}
+			else
+			{
+				Object unregistrationResults;
+				// if the multipleUnregistrationResult is not a json object the readTree method generates an exception that we intercept to insert the result as string in the answer
+				try
+				{
+					unregistrationResults = this.mapper.readTree(multipleUnregistrationResult);
+					WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+					jsonResult.setUnregistrationResults(unregistrationResults);
+					return this.mapper.writeValueAsString(jsonResult);
+				}
+				catch (Exception e)
+				{
+					WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+					jsonResult.setResult(multipleUnregistrationResult);
+					return this.mapper.writeValueAsString(jsonResult);
+				}
+			}
 		}
 		catch (Exception e)
 		{
