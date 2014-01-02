@@ -38,6 +38,15 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	private AtomicReference<EnvironmentRESTApi> environmentRestApi;
 	// reference for the WebsocketImplementation
 	private WebsocketImplementation websocketImplementation;
+	
+	/*
+	 * TODO decomment all the TODO lines to let search through the
+	 * RuleEngineRESTApi class
+	 * 
+	 * // reference for the RuleEngineRESTApi private RuleEngineRESTApi
+	 * ruleEngineRESTApi;
+	 */
+	
 	// list of users (by instances)
 	private List<WebsocketImplementation> users;
 	// list of notifications per users
@@ -68,6 +77,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.deviceRestApi = new AtomicReference<>();
 		// init the Environment Rest Api atomic reference
 		this.environmentRestApi = new AtomicReference<>();
+		
+		/*
+		 * TODO decomment all the TODO lines to let search through the
+		 * RuleEngineRESTApi class // init the RuleEngine Rest Api atomic
+		 * reference this.ruleEngineRESTApi = new AtomicReference<>();
+		 */
 		
 		// init the list of notifications per users
 		this.listOfNotificationsPerUser = new HashMap<>();
@@ -164,6 +179,34 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.environmentRestApi.compareAndSet(environmentRestApi, null);
 	}
 	
+	/**
+	 * Bind the RuleEngineRESTApi service (before the bundle activation)
+	 * 
+	 * @param ruleEngineRESTApi
+	 *            the RuleEngineRESTApi service to add
+	 */
+	
+	/*
+	 * TODO decomment all the TODO lines to let search through the
+	 * RuleEngineRESTApi class public void
+	 * addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) { // store a
+	 * reference to the EnvironmentRESTApi service
+	 * this.ruleEngineRESTApi.set(ruleEngineRESTApi); }
+	 */
+	
+	/**
+	 * Unbind the RuleEngineRESTApi service
+	 * 
+	 * @param ruleEngineRESTApi
+	 *            the RuleEngineRESTApi service to remove
+	 */
+	/*
+	 * TODO decomment all the TODO lines to let search through the
+	 * RuleEngineRESTApi class public void
+	 * removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) {
+	 * this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null); }
+	 */
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -175,11 +218,22 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
 	{
 		// Method used every time a user try to connect to the server
+		
 		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
 		
 		// create an instance of WebsocketImplementation
+		// TODO when you will decomment the line that follow this one, please
+		// comment this one
 		websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
 				this.environmentRestApi);
+		
+		/*
+		 * TODO decomment all the TODO lines to let search through the
+		 * RuleEngineRESTApi class websocketImplementation = new
+		 * WebsocketImplementation(this.context, this, this.deviceRestApi,
+		 * this.environmentRestApi, this.ruleEngineRESTApi);
+		 */
+		
 		return websocketImplementation;
 	}
 	
@@ -226,7 +280,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	
 	/**
 	 * Remove a user (by its instance) to the list of users connected to the
-	 * system
+	 * system and all its subscribed notifications
 	 * 
 	 * @param instance
 	 *            the instance of WebsocketImplementation dedicated to the user
@@ -249,7 +303,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	/**
-	 * Add one or more notification to the list of Notification subscribed by a
+	 * Add one or more notifications to the list of Notification subscribed by a
 	 * user
 	 * 
 	 * @param clientId
@@ -260,30 +314,38 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            notifications
 	 * @param notificationsList
 	 *            the list of notification that has to be subscribed
+	 * 
+	 * 
+	 * @return a {boolean} value that indicates if the registration succeded
+	 * 
 	 */
 	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
 			ArrayList<String> notificationsList)
 	{
+		// save a backup of the list of notifications because if something goes
+		// wrong we would restore it
 		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
+		// set the default result value
 		boolean result = false;
 		try
 		{
+			// store all the notifications subscribed by the user
 			HashMap<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
+			// set the default result to true (because we would store a list and
+			// in this case we have to return false only if something goes wrong
 			result = true;
 			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
 				// if the user has already subscribed other notifications, we
-				// have to
-				// copy them with the new one
+				// have to copy them in the new one
 				// and then we insert the notification required only if it has
-				// not
-				// already been inserted
+				// not already been inserted
 				ArrayList<String> existingList = existingControllableList.get(controllable);
 				
 				// if the user asks to subscribe the notifications for all the
 				// devices, it is not necessary to store the name of all the
-				// notifications already stored
+				// notifications already stored, so we delete them
 				if (controllable.equals("all"))
 				{
 					if (notificationsList.contains("all"))
@@ -293,7 +355,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					else
 					{
 						// if in the list doesn't exist an "all" element, but
-						// exist other elements, we cannot modify it (if for
+						// exist other elements, we cannot modify them (if for
 						// example there is a controllable device with one or
 						// more notifications enabled (not all) and we try to
 						// submit some notifications for all the devices, it
@@ -327,12 +389,15 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						// single value but there is a "all" value the method
 						// return false to say that it is not possible
 						result = false;
+						// we reset the list
 						existingList.clear();
 						existingList.add("all");
 						existingControllableList.put(controllable, existingList);
 					}
 					else
 					{
+						// if the user asks to subscribe more than one
+						// notification
 						for (String notification : notificationsList)
 						{
 							if (notification.equals("all"))
@@ -345,10 +410,15 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								existingList.clear();
 								if (!existingList.add(notification))
 									result = false;
+								// if in the list there is an "all" value all
+								// the other values are not necessary
 								break;
 							}
 							else
 							{
+								// if there isn't an "all" value we have to add
+								// all the notifications in the list, but only
+								// if they has not already been subscribed
 								if (!existingList.contains((String) notification))
 								{
 									if (!(existingList.add(notification)))
@@ -356,13 +426,16 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								}
 							}
 						}
-						// TODO forse qui devi mettere un
-						// if (!existingList.isEmpty())
+						// at the end of the process that initialize the list we
+						// can put it in the main list
 						existingControllableList.put(controllable, existingList);
 					}
 				}
 				else
 				{
+					// if the list of notifications refered to the following
+					// controllable device is empty we do not have
+					// to do any kind of check
 					existingList = new ArrayList<String>();
 					for (String notification : notificationsList)
 					{
@@ -379,17 +452,22 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						}
 						else
 						{
+							// if there isn't an "all" value we have to add
+							// all the notifications in the list, but only
+							// if they has not already been subscribed
 							if (!existingList.contains((String) notification))
 								existingList.add(notification);
 						}
 					}
-					// TODO forse qui devi mettere un
-					// if (!existingList.isEmpty())
+					// at the end of the process that initialize the list we
+					// can put it in the main list
 					existingControllableList.put(controllable, existingList);
 				}
 			}
 			else
 			{
+				// if the list of all notifications is empty we do not have
+				// to do any kind of check
 				existingControllableList = new HashMap<String, ArrayList<String>>();
 				ArrayList<String> newList = new ArrayList<String>();
 				for (String notification : notificationsList)
@@ -406,14 +484,19 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					}
 					else
 					{
+						// if there isn't an "all" value we have to add
+						// all the notifications in the list, but only
+						// if they has not already been subscribed
 						if (!newList.contains((String) notification))
 							newList.add(notification);
 					}
 				}
-				// TODO forse qui devi mettere un
-				// if (!existingList.isEmpty())
+				// at the end of the process that initialize the list we
+				// can put it in the main list
 				existingControllableList.put(controllable, newList);
 			}
+			// at the end of the process that initialize the list we
+			// can put it in the main list of notifications per user
 			this.listOfNotificationsPerUser.put(clientId, existingControllableList);
 		}
 		catch (Exception e)
@@ -423,6 +506,9 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		if (!result)
 		{
+			// if the result is false (so if something went wrong) we reset the
+			// list with the values store at the beginning of the registration
+			// process
 			this.listOfNotificationsPerUser.clear();
 			this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 		}
@@ -436,8 +522,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the id of a user (it is the last part of the instance (after
 	 *            the @))
 	 * 
-	 * @return a {ArrayList<String>} object with all the notifications
-	 *         subscribed by a user
+	 * @return a {HashMap<String, ArrayList<String>>} object with all the
+	 *         notifications subscribed by a user
 	 * 
 	 */
 	public HashMap<String, ArrayList<String>> getListOfNotificationsAndControllablesPerUser(String clientId)
@@ -448,8 +534,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	/**
 	 * Get the entire list of all the notifications subscribed
 	 * 
-	 * @return a {ArrayList<String>} object with all the notifications
-	 *         subscribed by a user
+	 * @return a {HashMap<String, HashMap<String, ArrayList<String>>>} object
+	 *         with all the notifications subscribed by all users
 	 * 
 	 */
 	public HashMap<String, HashMap<String, ArrayList<String>>> getListOfNotificationsAndControllables()
@@ -458,10 +544,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	/**
-	 * Get the entire list of all the notifications subscribed
-	 * 
-	 * @return a {ArrayList<String>} object with all the notifications
-	 *         subscribed by a user
+	 * Set the entire list of all the notifications subscribed with the passed
+	 * value
 	 * 
 	 */
 	public void setListOfNotificationsAndControllables(HashMap<String, HashMap<String, ArrayList<String>>> oldList)
@@ -488,16 +572,25 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            notifications
 	 * @param notificationToRemove
 	 *            the notification that has to be removed
+	 * 
+	 * 
+	 * @return a {boolean} value that indicates if the removal succeded
+	 * 
 	 */
 	public boolean removeNotificationFromListOfNotificationsPerControllableAndUser(String clientId,
 			String controllableToRemove, String notificationToRemove)
 	{
+		// set the default result value
 		boolean result = false;
 		try
 		{
+			// get the existing list of notifications subscribed by the user
 			HashMap<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			if ((existingControllableList != null) && !existingControllableList.isEmpty())
 			{
+				// if the list is not empty we try to get the list of
+				// notifications subscribed for the specific device indicated in
+				// the parameter (controllableToRemove)
 				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
 				if (existingList != null
 						|| ((controllableToRemove.equals("all") && notificationToRemove.equals("all"))))
@@ -509,62 +602,62 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						existingControllableList.clear();
 						result = true;
 					}
-					// if existingList != null and controllableToRemove =
-					// "all" it means that in the list of controllables
-					// there is only "all", so we can simply remove the
-					// value from the list addresses at "all"
 					else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
 					{
+						// if existingList != null and controllableToRemove =
+						// "all" it means that in the list of controllables
+						// there is only "all", so we can simply remove the
+						// value from the list addresses at "all"
 						result = existingList.remove(notificationToRemove);
-						// if the list is empty we remove completly the record
+						// if the list is empty we remove completely the record
 						if (existingList.isEmpty())
 							existingControllableList.remove(controllableToRemove);
 					}
-					// if the controllable to remove is different from "all"
-					// but we want to remove all the notifications about it,
-					// we can simply remove its list of notifications
 					else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
 					{
+						// if the controllable to remove is different from "all"
+						// but we want to remove all the notifications about it,
+						// we can simply remove its list of notifications
 						existingControllableList.remove(controllableToRemove);
 						// it is not necessary to check if the command did what
 						// it would do because there is an exception interceptor
 						// at the end of the method that set the result to false
 						result = true;
-						
 					}
-					else
+					else if (existingList.contains((String) notificationToRemove))
 					{
 						// if both the controllable and the notification to
 						// remove are not "all" we have to remove a single
 						// value from the list
-						if (existingList.contains((String) notificationToRemove))
-						{
-							existingList.remove(existingList.indexOf((String) notificationToRemove));
-							// if the list is empty we remove completly the
-							// record
-							if (existingList.isEmpty())
-								existingControllableList.remove(controllableToRemove);
-							// it is not necessary to check if the command did
-							// what it would do because there is an exception
-							// interceptor at the end of the method that set the
-							// result to false
-							result = true;
-						}
+						existingList.remove(existingList.indexOf((String) notificationToRemove));
+						// if the list is empty we remove completely the
+						// record
+						if (existingList.isEmpty())
+							existingControllableList.remove(controllableToRemove);
+						// it is not necessary to check if the command did
+						// what it would do because there is an exception
+						// interceptor at the end of the method that set the
+						// result to false
+						result = true;
 					}
 				}
-				// if there isn't an "all" value in the list of
-				// controllables, but the command says us to remove a
-				// particular notification from all the controllables we
-				// have to scroll down all the list of controllables
 				else if (controllableToRemove.equals("all") && (!notificationToRemove.equals("all")))
 				{
+					// if there isn't an "all" value in the list of
+					// controllables, but the command says us to remove a
+					// particular notification from all the controllables we
+					// have to scroll down all the list of existing
+					// controllables
 					Collection<String> allExistingKeys = existingControllableList.keySet();
 					if (!allExistingKeys.isEmpty())
 					{
+						// set the default result value to false
 						result = false;
 						ArrayList<String> listOfKeysToRemove = new ArrayList<String>();
-						//we remove a particular notification from all the controllables
-						//if we can remove at least one notification the result is true
+						// we remove a particular notification from all the
+						// controllables!
+						// if we can remove at least one notification the result
+						// is true
 						for (String singleKey : allExistingKeys)
 						{
 							if (existingControllableList.get(singleKey).remove(notificationToRemove))
@@ -575,16 +668,17 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							// record
 							if (existingControllableList.get(singleKey).isEmpty())
 							{
-								// it is necessary because if I remove an element from
-								// the list used in the for an exception will be
-								// generated
+								// it is necessary to store all the keys to
+								// remove in a list because if we remove an
+								// element from the list used in the for, an
+								// exception will be generated
 								listOfKeysToRemove.add(singleKey);
 							}
 						}
 						// remove all the empty lists from the list of
 						// notification subscribed
-						// it is necessary because if I remove an element from
-						// the list used in the for an exception will be
+						// it is necessary because if we remove an element from
+						// the list used in the for, an exception will be
 						// generated
 						if (!listOfKeysToRemove.isEmpty() && listOfKeysToRemove != null)
 						{
@@ -604,8 +698,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	/**
-	 * Get the classLoader needed to invoke methods It is necessary because the
-	 * invocation is possible only from the main class of the package
+	 * Get the classLoader needed to invoke methods
+	 * 
+	 * It is necessary because the invocation is possible only from the main
+	 * class of the package
 	 * 
 	 * @return a {ClassLoader} object that allows to access all the other
 	 *         classes (with their methods)
@@ -662,6 +758,15 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 	}
 	
+	/**
+	 * Clone an Hashmap containing another hashmap *
+	 * 
+	 * @param hashMapToCopy
+	 *            the hashMap that has to be copied
+	 * 
+	 * @return a {HashMap<String, HashMap<String, ArrayList<String>>>} object
+	 *         that is a copy of the one passed as argument
+	 */
 	@SuppressWarnings("unchecked")
 	public HashMap<String, HashMap<String, ArrayList<String>>> copyHashMapByValue(
 			HashMap<String, HashMap<String, ArrayList<String>>> hashMapToCopy)
