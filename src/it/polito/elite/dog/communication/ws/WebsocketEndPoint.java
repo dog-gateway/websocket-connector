@@ -234,6 +234,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public void removeUser(WebsocketImplementation instance)
 	{
 		this.users.remove(instance);
+		this.listOfNotificationsPerUser.remove(instance.toString().substring(instance.toString().indexOf("@") + 1));
 	}
 	
 	/**
@@ -355,7 +356,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								}
 							}
 						}
-						//TODO forse qui devi mettere un 
+						// TODO forse qui devi mettere un
 						// if (!existingList.isEmpty())
 						existingControllableList.put(controllable, existingList);
 					}
@@ -382,7 +383,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 								existingList.add(notification);
 						}
 					}
-					//TODO forse qui devi mettere un 
+					// TODO forse qui devi mettere un
 					// if (!existingList.isEmpty())
 					existingControllableList.put(controllable, existingList);
 				}
@@ -409,7 +410,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 							newList.add(notification);
 					}
 				}
-				//TODO forse qui devi mettere un 
+				// TODO forse qui devi mettere un
 				// if (!existingList.isEmpty())
 				existingControllableList.put(controllable, newList);
 			}
@@ -444,7 +445,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		return this.listOfNotificationsPerUser.get(clientId);
 	}
 	
-
 	/**
 	 * Get the entire list of all the notifications subscribed
 	 * 
@@ -457,8 +457,6 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		return this.listOfNotificationsPerUser;
 	}
 	
-	
-
 	/**
 	 * Get the entire list of all the notifications subscribed
 	 * 
@@ -477,6 +475,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			// if the list is null it has to continue without copying the list
 		}
 	}
+	
 	/**
 	 * Remove a notification subscribed from the list of the notifications
 	 * subscribed by a user
@@ -500,7 +499,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 			if ((existingControllableList != null) && !existingControllableList.isEmpty())
 			{
 				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
-				if (existingList != null)
+				if (existingList != null
+						|| ((controllableToRemove.equals("all") && notificationToRemove.equals("all"))))
 				{
 					// if we want to remove all the notifications of all the
 					// controllables we can simply clear all the list
@@ -526,7 +526,9 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					else if ((!controllableToRemove.equals("all")) && notificationToRemove.equals("all"))
 					{
 						existingControllableList.remove(controllableToRemove);
-						//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
+						// it is not necessary to check if the command did what
+						// it would do because there is an exception interceptor
+						// at the end of the method that set the result to false
 						result = true;
 						
 					}
@@ -538,10 +540,14 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						if (existingList.contains((String) notificationToRemove))
 						{
 							existingList.remove(existingList.indexOf((String) notificationToRemove));
-							// if the list is empty we remove completly the record
+							// if the list is empty we remove completly the
+							// record
 							if (existingList.isEmpty())
 								existingControllableList.remove(controllableToRemove);
-							//it is not necessary to check if the command did what it would do because there is an exception interceptor at the end of the method that set the result to false
+							// it is not necessary to check if the command did
+							// what it would do because there is an exception
+							// interceptor at the end of the method that set the
+							// result to false
 							result = true;
 						}
 					}
@@ -555,17 +561,35 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					Collection<String> allExistingKeys = existingControllableList.keySet();
 					if (!allExistingKeys.isEmpty())
 					{
-						result = true;
+						result = false;
+						ArrayList<String> listOfKeysToRemove = new ArrayList<String>();
+						//we remove a particular notification from all the controllables
+						//if we can remove at least one notification the result is true
 						for (String singleKey : allExistingKeys)
 						{
-							if (!(existingControllableList.get(singleKey).remove(notificationToRemove)))
+							if (existingControllableList.get(singleKey).remove(notificationToRemove))
 							{
-								result = false;
-								break;
+								result = true;
 							}
-							// if the list is empty we remove completely the record
+							// if the list is empty we remove completely the
+							// record
 							if (existingControllableList.get(singleKey).isEmpty())
-								existingControllableList.remove(singleKey);
+							{
+								// it is necessary because if I remove an element from
+								// the list used in the for an exception will be
+								// generated
+								listOfKeysToRemove.add(singleKey);
+							}
+						}
+						// remove all the empty lists from the list of
+						// notification subscribed
+						// it is necessary because if I remove an element from
+						// the list used in the for an exception will be
+						// generated
+						if (!listOfKeysToRemove.isEmpty() && listOfKeysToRemove != null)
+						{
+							for (String singleKeyToRemove : listOfKeysToRemove)
+								existingControllableList.remove(singleKeyToRemove);
 						}
 					}
 				}
@@ -639,7 +663,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	@SuppressWarnings("unchecked")
-	public HashMap<String, HashMap<String, ArrayList<String>>> copyHashMapByValue(HashMap<String, HashMap<String, ArrayList<String>>> hashMapToCopy)
+	public HashMap<String, HashMap<String, ArrayList<String>>> copyHashMapByValue(
+			HashMap<String, HashMap<String, ArrayList<String>>> hashMapToCopy)
 	{
 		HashMap<String, HashMap<String, ArrayList<String>>> newHashMap = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		Collection<String> allExistingKeys = hashMapToCopy.keySet();
@@ -653,9 +678,10 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 				{
 					for (String singleKeyInSecondMap : allExistingKeysInSecondMap)
 					{
-						newMap.put(singleKeyInSecondMap, (ArrayList<String>) hashMapToCopy.get(singleKey).get(singleKeyInSecondMap).clone());
+						newMap.put(singleKeyInSecondMap,
+								(ArrayList<String>) hashMapToCopy.get(singleKey).get(singleKeyInSecondMap).clone());
 					}
-					newHashMap.put(singleKey,newMap);
+					newHashMap.put(singleKey, newMap);
 				}
 			}
 		}

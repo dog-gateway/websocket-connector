@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+
+import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -675,9 +677,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 *            invoke
 	 * 
 	 */
-	public String invokeMethodByAnnotation(String endPoint, String action, String parameters) throws IOException,
-			ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
-			InstantiationException, IllegalAccessException, InvocationTargetException
+	public String invokeMethodByAnnotation(String endPoint, String action, String parameters) throws ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
+			InstantiationException, IllegalAccessException, InvocationTargetException, JsonGenerationException, JsonMappingException
 	{
 		
 		// first of all we choose the class that contains the method we want to
@@ -965,7 +966,15 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							// we send the result as Json
 							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
 							jsonResult.setResult(resultMessage);
-							return this.mapper.writeValueAsString(jsonResult);
+							try
+							{
+								return this.mapper.writeValueAsString(jsonResult);
+							}
+							catch (IOException e1)
+							{
+								e1.printStackTrace();
+								return "{\"result\":\"" + jsonResult + "\"}";
+							}
 						}
 					}
 					if (clazz.toString().toLowerCase().contains("environment"))
@@ -999,7 +1008,15 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							// we send the result as Json
 							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
 							jsonResult.setResult(resultMessage);
-							return this.mapper.writeValueAsString(jsonResult);
+							try
+							{
+								return this.mapper.writeValueAsString(jsonResult);
+							}
+							catch (IOException e1)
+							{
+								e1.printStackTrace();
+								return "{\"result\":\"" + jsonResult + "\"}";
+							}
 						}
 					}
 					if (clazz.equals(this.getClass()))
@@ -1014,7 +1031,15 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							String resultMessage = "Command execution failed";
 							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
 							jsonResult.setResult(resultMessage);
-							return this.mapper.writeValueAsString(jsonResult);
+							try
+							{
+								return this.mapper.writeValueAsString(jsonResult);
+							}
+							catch (IOException e1)
+							{
+								e1.printStackTrace();
+								return "{\"result\":\"" + jsonResult + "\"}";
+							}
 						}
 					}
 				}
