@@ -224,17 +224,17 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		// create an instance of WebsocketImplementation
 		// TODO when you will decomment the line that follow this one, please
 		// comment this one
-		websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
+		this.websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
 				this.environmentRestApi);
 		
 		/*
 		 * TODO decomment all the TODO lines to let search through the
-		 * RuleEngineRESTApi class websocketImplementation = new
+		 * RuleEngineRESTApi class this.websocketImplementation = new
 		 * WebsocketImplementation(this.context, this, this.deviceRestApi,
 		 * this.environmentRestApi, this.ruleEngineRESTApi);
 		 */
 		
-		return websocketImplementation;
+		return this.websocketImplementation;
 	}
 	
 	/**
@@ -722,8 +722,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public void handleEvent(Event event)
 	{
 		// method that handle the event generated for notification
-		if (websocketImplementation != null && users.size() != 0)
-			websocketImplementation.sendNotification(event);
+		if (this.websocketImplementation != null && this.users.size() != 0)
+			this.websocketImplementation.sendNotification(event);
 	}
 	
 	/*
@@ -754,7 +754,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		// even if we cannot read the value from the file we instantiate the
 		// server because there is a default value
-		registerHttpServlet();
+		this.registerHttpServlet();
 		
 	}
 	

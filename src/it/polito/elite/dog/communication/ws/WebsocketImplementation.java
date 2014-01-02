@@ -168,7 +168,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// if the connection is closed we remove the user from the list of users
 		// connected to the server and his notifications from the list of
 		// notifications
-		websocketEndPoint.removeUser(this);
+		this.websocketEndPoint.removeUser(this);
 	}
 	
 	/**
@@ -186,9 +186,9 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		this.connection = connection;
 		
 		// add the user to the list of users connected to the system
-		websocketEndPoint.addUser(this);
+		this.websocketEndPoint.addUser(this);
 		this.logger.log(LogService.LOG_INFO, "Connection Protocol: " + connection.getProtocol());
-		if (connection.isOpen())
+		if (this.connection.isOpen())
 		{
 			try
 			{
@@ -206,7 +206,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 				e.printStackTrace();
 				// if something goes wrong we remove the user from the list of
 				// users connected to the server
-				websocketEndPoint.removeUser(this);
+				this.websocketEndPoint.removeUser(this);
 			}
 		}
 	}
@@ -415,7 +415,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebsocketImplementation user : websocketEndPoint.getUsers())
+				for (WebsocketImplementation user : this.websocketEndPoint.getUsers())
 				{
 					if (!notificationContent.isEmpty())
 					{
@@ -427,7 +427,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							HashMap<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
 							try
 							{
-								listOfControllable.putAll(websocketEndPoint
+								listOfControllable.putAll(this.websocketEndPoint
 										.getListOfNotificationsAndControllablesPerUser(user.toString().substring(
 												user.toString().indexOf("@") + 1)));
 							}
@@ -498,7 +498,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// store a backup copy of the list of notifications, so, in case of
 		// errors, we can restore it
 		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
-		listOfNotificationsPerUserBackup = websocketEndPoint.copyHashMapByValue(websocketEndPoint
+		listOfNotificationsPerUserBackup = this.websocketEndPoint.copyHashMapByValue(this.websocketEndPoint
 				.getListOfNotificationsAndControllables());
 		
 		Object notifications;
@@ -520,7 +520,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// if we receive only one single notification we can call directly
 			// the method that does the unregistration that will return true if
 			// the unsubscribtion was successfully completed
-			if (websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
+			if (this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 					controllable, (String) notifications))
 				result = "Unregistration completed successfully";
 		}
@@ -534,13 +534,13 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
-				if (!websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
+				if (!this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 						controllable, (String) current.getTextValue()))
 				{
 					// if something goes wrong we reset the value copying the
 					// list backed up at the beginning of the unregistration
 					// process returning an error as result
-					websocketEndPoint.setListOfNotificationsAndControllables(websocketEndPoint
+					this.websocketEndPoint.setListOfNotificationsAndControllables(this.websocketEndPoint
 							.copyHashMapByValue(listOfNotificationsPerUserBackup));
 					result = "Unregistration failed";
 					break;
@@ -551,7 +551,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if the notification list is empty the user wants to unsubscribe
 			// all the notifications
-			if (websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
+			if (this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
 					controllable, "all"))
 				result = "Unregistration completed successfully";
 		}
@@ -735,7 +735,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// at the end of the process that chooses which notifications have
 			// to be subscribed we can call the method that does the real
 			// subscription
-			if (websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable,
+			if (this.websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable,
 					notificationsList))
 				result = "Registration completed successfully";
 		}
@@ -892,7 +892,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 									// and "/api/devices/{device-id}" we have to
 									// take care to choose the right one
 									if (methodAnnotationParts[k]
-											.compareTo(endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
+											.compareTo(this.endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
 									{
 										// if I have already chosen a method it
 										// means that a method without a
@@ -1193,7 +1193,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		try
 		{
 			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi");
-			if (checkClass(clazz, endPoint))
+			if (this.checkClass(clazz, endPoint))
 			{
 				return clazz;
 			}
@@ -1209,7 +1209,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		try
 		{
 			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi");
-			if (checkClass(clazz, endPoint))
+			if (this.checkClass(clazz, endPoint))
 			{
 				return clazz;
 			}
@@ -1228,7 +1228,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		 * 
 		 * try { clazz = cls.loadClass(
 		 * "it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi"
-		 * ); if (checkClass(clazz, endPoint)) { return clazz; } } catch
+		 * ); if (this.checkClass(clazz, endPoint)) { return clazz; } } catch
 		 * (Exception e) { e.printStackTrace(); }
 		 */
 		
