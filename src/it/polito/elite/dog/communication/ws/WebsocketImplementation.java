@@ -264,6 +264,18 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						// initial parts of path that indicates the class
 						this.numberOfClassParameters = 0;
 					}
+					else
+					{
+						// reset the type for the registration (if it is not a
+						// notification request but the previous request was a
+						// notification one, it is necessary to reset the type
+						// value, otherwise the method will recognize it as a
+						// notification one
+						this.typeForRegistration = type;
+						// set to 0 the variable by which we usually count the
+						// initial parts of path that indicates the class
+						this.numberOfClassParameters = 0;
+					}
 					String result;
 					try
 					{
@@ -592,11 +604,11 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		// depending on the type of registration indicated in the request we
 		// call one different method
-		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
 			return this.notificationRegistration(this.clientIdForRegistration, "all", notifications);
 		}
-		if (this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, "all", notifications);
 		}
@@ -642,11 +654,11 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		// depending on the type of registration indicated in the request we
 		// call one different method
-		if (this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
 			return this.notificationRegistration(this.clientIdForRegistration, controllable, notifications);
 		}
-		if (this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, controllable, notifications);
 		}
@@ -808,7 +820,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// if the type of the message contains the word "notification" it means
 		// that the right class is this one, otherwise we call the method that
 		// identify the right class
-		if (this.typeForRegistration.contains("notification"))
+		if (this.typeForRegistration!= null && this.typeForRegistration.toLowerCase().contains("notification"))
 		{
 			clazz = this.getClass();
 		}
