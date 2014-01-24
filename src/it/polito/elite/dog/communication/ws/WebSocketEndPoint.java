@@ -561,7 +561,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			// if the list is null it has to continue without copying the list
+			//it was not possible to set the list of Notifications
+			this.logger.log(LogService.LOG_ERROR, "It was not possible to set the list of Notifications");
 		}
 	}
 	

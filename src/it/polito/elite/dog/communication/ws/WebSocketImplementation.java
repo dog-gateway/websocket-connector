@@ -449,6 +449,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							{
 								// if the list is null it has to continue
 								// without copying the list
+								this.logger.log(LogService.LOG_INFO, "The list of notifications is empty");
 							}
 							// we send only the right notifications checking the
 							// list
