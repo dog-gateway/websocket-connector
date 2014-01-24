@@ -1,6 +1,6 @@
 package it.polito.elite.dog.communication.ws.message;
 
-public class WebsocketJsonResponse extends WebsocketJsonData
+public class WebSocketJsonResponse extends WebSocketJsonData
 {
 	
 	// sequence number used to indicate the request for which we are sending the

@@ -29,15 +29,15 @@ import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.osgi.service.log.LogService;
 
-public class WebsocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
+public class WebSocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
 {
 	
 	// reference for the DeviceRESTApi
 	private AtomicReference<DeviceRESTApi> deviceRestApi;
 	// reference for the EnvironmentRESTApi
 	private AtomicReference<EnvironmentRESTApi> environmentRestApi;
-	// reference for the WebsocketImplementation
-	private WebsocketImplementation websocketImplementation;
+	// reference for the WebSocketImplementation
+	private WebSocketImplementation webSocketImplementation;
 	
 	/*
 	 * TODO decomment all the TODO lines to let search through the
@@ -48,7 +48,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 */
 	
 	// list of users (by instances)
-	private List<WebsocketImplementation> users;
+	private List<WebSocketImplementation> users;
 	// list of notifications per users
 	private HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUser;
 	
@@ -65,12 +65,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	private ObjectMapper mapper;
 	
 	// path at which the server will be accessible
-	private String websocketPath;
+	private String webSocketPath;
 	
 	private static final long serialVersionUID = 1L;
 	private HttpService http;
 	
-	public WebsocketEndPoint()
+	public WebSocketEndPoint()
 	{
 		
 		// init the Device Rest Api atomic reference
@@ -88,11 +88,11 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.listOfNotificationsPerUser = new HashMap<>();
 		
 		// init the list of users (by instances)
-		this.users = new ArrayList<WebsocketImplementation>();
+		this.users = new ArrayList<WebSocketImplementation>();
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server.com:8080)
-		this.websocketPath = "/dogws";
+		this.webSocketPath = "/dogws";
 		
 	}
 	
@@ -221,20 +221,20 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
 		
-		// create an instance of WebsocketImplementation
+		// create an instance of WebSocketImplementation
 		// TODO when you will decomment the line that follow this one, please
 		// comment this one
-		this.websocketImplementation = new WebsocketImplementation(this.context, this, this.deviceRestApi,
+		this.webSocketImplementation = new WebSocketImplementation(this.context, this, this.deviceRestApi,
 				this.environmentRestApi);
 		
 		/*
 		 * TODO decomment all the TODO lines to let search through the
-		 * RuleEngineRESTApi class this.websocketImplementation = new
-		 * WebsocketImplementation(this.context, this, this.deviceRestApi,
+		 * RuleEngineRESTApi class this.webSocketImplementation = new
+		 * WebSocketImplementation(this.context, this, this.deviceRestApi,
 		 * this.environmentRestApi, this.ruleEngineRESTApi);
 		 */
 		
-		return this.websocketImplementation;
+		return this.webSocketImplementation;
 	}
 	
 	/**
@@ -244,11 +244,12 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		try
 		{
-			this.http.registerServlet(this.websocketPath, this, null, null);
+			this.http.registerServlet(this.webSocketPath, this, null, null);
 		}
 		catch (ServletException | NamespaceException e)
 		{
-			e.printStackTrace();
+			//it was not possible to register the servlet
+			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 	}
 	
@@ -271,9 +272,9 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * Add a user (by its instance) to the list of users connected to the system
 	 * 
 	 * @param instance
-	 *            the instance of WebsocketImplementation dedicated to the user
+	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public void addUser(WebsocketImplementation instance)
+	public void addUser(WebSocketImplementation instance)
 	{
 		this.users.add(instance);
 	}
@@ -283,28 +284,32 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * system and all its subscribed notifications
 	 * 
 	 * @param instance
-	 *            the instance of WebsocketImplementation dedicated to the user
+	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public void removeUser(WebsocketImplementation instance)
+	public void removeUser(WebSocketImplementation instance)
 	{
+		// we remove the user from the list of users
 		this.users.remove(instance);
+		// remove all the notifications subscribed by the user (we take the
+		// userId from instance: we take the last part of the instance: the part
+		// that is after the @)
 		this.listOfNotificationsPerUser.remove(instance.toString().substring(instance.toString().indexOf("@") + 1));
 	}
 	
 	/**
 	 * Get the list of all users (obtaining their instance)
 	 * 
-	 * @return a {List<WebsocketImplementation>} object with all the users'
+	 * @return a {List<WebSocketImplementation>} object with all the users'
 	 *         instance
 	 */
-	public List<WebsocketImplementation> getUsers()
+	public List<WebSocketImplementation> getUsers()
 	{
 		return this.users;
 	}
 	
 	/**
 	 * Add one or more notifications to the list of Notification subscribed by a
-	 * user
+	 * user for a specific controllable
 	 * 
 	 * @param clientId
 	 *            the id of a user (it is the last part of the instance (after
@@ -319,7 +324,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {boolean} value that indicates if the registration succeded
 	 * 
 	 */
-	public boolean putListOfNotificationsPerControllableAndUser(String clientId, String controllable,
+	public boolean putNotifications(String clientId, String controllable,
 			ArrayList<String> notificationsList)
 	{
 		// save a backup of the list of notifications because if something goes
@@ -360,7 +365,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 						// more notifications enabled (not all) and we try to
 						// submit some notifications for all the devices, it
 						// return false)
-						ArrayList<String> existingListAll = existingControllableList.get("all");
+						List<String> existingListAll = existingControllableList.get("all");
 						if (existingListAll == null || existingListAll.isEmpty())
 						{
 							return false;
@@ -501,7 +506,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger.log(LogService.LOG_INFO, e.toString());
 			result = false;
 		}
 		if (!result)
@@ -526,7 +531,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         notifications subscribed by a user
 	 * 
 	 */
-	public HashMap<String, ArrayList<String>> getListOfNotificationsAndControllablesPerUser(String clientId)
+	public HashMap<String, ArrayList<String>> getNotificationsPerUser(String clientId)
 	{
 		return this.listOfNotificationsPerUser.get(clientId);
 	}
@@ -538,7 +543,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *         with all the notifications subscribed by all users
 	 * 
 	 */
-	public HashMap<String, HashMap<String, ArrayList<String>>> getListOfNotificationsAndControllables()
+	public HashMap<String, HashMap<String, ArrayList<String>>> getNotifications()
 	{
 		return this.listOfNotificationsPerUser;
 	}
@@ -548,7 +553,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * value
 	 * 
 	 */
-	public void setListOfNotificationsAndControllables(HashMap<String, HashMap<String, ArrayList<String>>> oldList)
+	public void setNotifications(HashMap<String, HashMap<String, ArrayList<String>>> oldList)
 	{
 		try
 		{
@@ -577,7 +582,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {boolean} value that indicates if the removal succeded
 	 * 
 	 */
-	public boolean removeNotificationFromListOfNotificationsPerControllableAndUser(String clientId,
+	public boolean removeNotification(String clientId,
 			String controllableToRemove, String notificationToRemove)
 	{
 		// set the default result value
@@ -591,7 +596,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 				// if the list is not empty we try to get the list of
 				// notifications subscribed for the specific device indicated in
 				// the parameter (controllableToRemove)
-				ArrayList<String> existingList = existingControllableList.get(controllableToRemove);
+				List<String> existingList = existingControllableList.get(controllableToRemove);
 				if (existingList != null
 						|| ((controllableToRemove.equals("all") && notificationToRemove.equals("all"))))
 				{
@@ -653,7 +658,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 					{
 						// set the default result value to false
 						result = false;
-						ArrayList<String> listOfKeysToRemove = new ArrayList<String>();
+						List<String> listOfKeysToRemove = new ArrayList<String>();
 						// we remove a particular notification from all the
 						// controllables!
 						// if we can remove at least one notification the result
@@ -691,7 +696,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger.log(LogService.LOG_WARNING, e.toString());
 			result = false;
 		}
 		return result;
@@ -708,7 +713,7 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	 */
 	public ClassLoader getClassloader() throws ClassNotFoundException
 	{
-		return WebsocketEndPoint.class.getClassLoader();
+		return WebSocketEndPoint.class.getClassLoader();
 	}
 	
 	/*
@@ -722,8 +727,8 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	public void handleEvent(Event event)
 	{
 		// method that handle the event generated for notification
-		if (this.websocketImplementation != null && this.users.size() != 0)
-			this.websocketImplementation.sendNotification(event);
+		if (this.webSocketImplementation != null && this.users.size() != 0)
+			this.webSocketImplementation.sendNotification(event);
 	}
 	
 	/*
@@ -734,22 +739,23 @@ public class WebsocketEndPoint extends WebSocketServlet implements EventHandler,
 	@Override
 	public void updated(Dictionary<String, ?> properties) throws ConfigurationException
 	{
+		//get the parameters from the configuration file
 		// maybe the received configuration is not for me...
 		if (properties != null)
 		{
-			String websocketPathTemp = "";
+			String webSocketPathTemp = "";
 			// maybe the reading process from the file could have some troubles
 			try
 			{
-				websocketPathTemp = (String) properties.get("WEBSOCKETPATH");
-				if ((!websocketPathTemp.isEmpty()) && (websocketPathTemp != null))
+				webSocketPathTemp = (String) properties.get("WEBSOCKETPATH");
+				if ((!webSocketPathTemp.isEmpty()) && (webSocketPathTemp != null))
 				{
-					this.websocketPath = websocketPathTemp;
+					this.webSocketPath = webSocketPathTemp;
 				}
 			}
 			catch (Exception e)
 			{
-				e.printStackTrace();
+				this.logger.log(LogService.LOG_WARNING, e.toString());
 			}
 		}
 		// even if we cannot read the value from the file we instantiate the

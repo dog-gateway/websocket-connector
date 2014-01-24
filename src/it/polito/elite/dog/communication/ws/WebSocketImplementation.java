@@ -2,10 +2,10 @@ package it.polito.elite.dog.communication.ws;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-import it.polito.elite.dog.communication.ws.message.WebsocketJsonInvocationResult;
-import it.polito.elite.dog.communication.ws.message.WebsocketJsonNotification;
-import it.polito.elite.dog.communication.ws.message.WebsocketJsonRequest;
-import it.polito.elite.dog.communication.ws.message.WebsocketJsonResponse;
+import it.polito.elite.dog.communication.ws.message.WebSocketJsonInvocationResult;
+import it.polito.elite.dog.communication.ws.message.WebSocketJsonNotification;
+import it.polito.elite.dog.communication.ws.message.WebSocketJsonRequest;
+import it.polito.elite.dog.communication.ws.message.WebSocketJsonResponse;
 import it.polito.elite.dog.core.library.model.notification.Notification;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
@@ -46,10 +47,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 
-public class WebsocketImplementation implements WebSocket.OnTextMessage
+public class WebSocketImplementation implements WebSocket.OnTextMessage
 {
 	// instance of the connection used to obtain the user id
-	private WebsocketImplementation connectionInstance;
+	private WebSocketImplementation connectionInstance;
 	// number of initial parameters in the endPoint (ex uri or path) that
 	// indicates the class in which the requested action will be performed
 	// (devices, environment, rules, ...)
@@ -59,8 +60,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	// environment, rules, ...)
 	private String[] endPointParts;
 	
-	// reference for the WebsocketEndPoint
-	private WebsocketEndPoint websocketEndPoint;
+	// reference for the WebSocketEndPoint
+	private WebSocketEndPoint webSocketEndPoint;
 	
 	// connection used to send and receive messages
 	private Connection connection;
@@ -94,7 +95,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	// registration
 	private String typeForRegistration;
 	
-	public WebsocketImplementation(BundleContext context, WebsocketEndPoint websocketEndPoint,
+	public WebSocketImplementation(BundleContext context, WebSocketEndPoint webSocketEndPoint,
 			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi)
 	{
 		/*
@@ -104,14 +105,14 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		 * TODO and add the service to component.xml file to let search through
 		 * the RuleEngineRESTApi class
 		 * 
-		 * public WebsocketImplementation(BundleContext context,
-		 * WebsocketEndPoint websocketEndPoint, AtomicReference<DeviceRESTApi>
+		 * public WebSocketImplementation(BundleContext context,
+		 * WebSocketEndPoint webSocketEndPoint, AtomicReference<DeviceRESTApi>
 		 * deviceRESTApi, AtomicReference<EnvironmentRESTApi>
 		 * environmentRESTApi, AtomicReference<RuleEngineRESTApi>
 		 * ruleEngineRESTApi) {
 		 */
-		// init the WebsocketEndPoint reference
-		this.websocketEndPoint = websocketEndPoint;
+		// init the WebSocketEndPoint reference
+		this.webSocketEndPoint = webSocketEndPoint;
 		// init the Device Rest Api atomic reference
 		this.deviceRESTApi = deviceRESTApi;
 		// init the Environment Rest Api atomic reference
@@ -163,12 +164,12 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	 * 
 	 */
 	@Override
-	public void onClose(int arg0, String arg1)
+	public void onClose(int statusCode, String reason)
 	{
 		// if the connection is closed we remove the user from the list of users
 		// connected to the server and his notifications from the list of
 		// notifications
-		this.websocketEndPoint.removeUser(this);
+		this.webSocketEndPoint.removeUser(this);
 	}
 	
 	/**
@@ -186,7 +187,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		this.connection = connection;
 		
 		// add the user to the list of users connected to the system
-		this.websocketEndPoint.addUser(this);
+		this.webSocketEndPoint.addUser(this);
 		this.logger.log(LogService.LOG_INFO, "Connection Protocol: " + connection.getProtocol());
 		if (this.connection.isOpen())
 		{
@@ -203,10 +204,11 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			}
 			catch (IOException e)
 			{
-				e.printStackTrace();
+				//it was not possible to open the connection
+				this.logger.log(LogService.LOG_INFO, e.toString());
 				// if something goes wrong we remove the user from the list of
 				// users connected to the server
-				this.websocketEndPoint.removeUser(this);
+				this.webSocketEndPoint.removeUser(this);
 			}
 		}
 	}
@@ -225,19 +227,19 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		if (!data.isEmpty())
 		{
 			// variable used to parse all the Json data
-			WebsocketJsonRequest websocketReceivedData;
+			WebSocketJsonRequest webSocketReceivedData;
 			try
 			{
 				// parse Json code received
-				websocketReceivedData = this.mapper.readValue(data, WebsocketJsonRequest.class);
-				this.logger.log(LogService.LOG_INFO, "Received data: " + websocketReceivedData.toString());
-				String clientId = websocketReceivedData.getClientId();
-				String sequenceNumber = websocketReceivedData.getSequenceNumber();
-				String messageType = websocketReceivedData.getMessageType();
-				String type = websocketReceivedData.getType();
-				String action = websocketReceivedData.getAction();
-				String endPoint = websocketReceivedData.getEndPoint();
-				String parameters = websocketReceivedData.getParameters();
+				webSocketReceivedData = this.mapper.readValue(data, WebSocketJsonRequest.class);
+				this.logger.log(LogService.LOG_INFO, "Received data: " + webSocketReceivedData.toString());
+				String clientId = webSocketReceivedData.getClientId();
+				String sequenceNumber = webSocketReceivedData.getSequenceNumber();
+				String messageType = webSocketReceivedData.getMessageType();
+				String type = webSocketReceivedData.getType();
+				String action = webSocketReceivedData.getAction();
+				String endPoint = webSocketReceivedData.getEndPoint();
+				String parameters = webSocketReceivedData.getParameters();
 				// check if the user is the right one and if the message is a
 				// request
 				if ((clientId != null)
@@ -285,7 +287,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						result = this.invokeMethodByAnnotation(endPoint, action, parameters);
 						this.logger.log(LogService.LOG_INFO, "Sending data: " + result);
 						// transform the result in a Json message
-						WebsocketJsonResponse jsonResponse = new WebsocketJsonResponse();
+						WebSocketJsonResponse jsonResponse = new WebSocketJsonResponse();
 						if (!clientId.isEmpty())
 							jsonResponse.setClientId(clientId);
 						if (!sequenceNumber.isEmpty())
@@ -299,7 +301,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						// means that something went wrong
 						if (result.isEmpty())
 						{
-							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 							jsonResult.setResult("Something went wrong");
 							result = this.mapper.writeValueAsString(jsonResult);
 						}
@@ -313,7 +315,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						}
 						catch (Exception e)
 						{
-							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 							jsonResult.setResult(result);
 							result = this.mapper.writeValueAsString(jsonResult);
 							resultObject = this.mapper.readTree(result);
@@ -328,7 +330,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							| IllegalArgumentException | InstantiationException | IllegalAccessException
 							| InvocationTargetException e)
 					{
-						e.printStackTrace();
+						this.logger.log(LogService.LOG_INFO, e.toString());
 					}
 				}
 				else
@@ -336,7 +338,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 					// the request has not the right parameters (clientId and
 					// messageType)
 					// the error message is sent in json format
-					WebsocketJsonResponse jsonResponse = new WebsocketJsonResponse();
+					WebSocketJsonResponse jsonResponse = new WebSocketJsonResponse();
 					if (!clientId.isEmpty())
 						jsonResponse.setClientId(clientId);
 					if (!sequenceNumber.isEmpty())
@@ -349,7 +351,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			}
 			catch (IOException e1)
 			{
-				e1.printStackTrace();
+				this.logger.log(LogService.LOG_INFO, e1.toString());
 			}
 		}
 	}
@@ -376,7 +378,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// we can received a single notification or more than one
 			// notification so we create a list in every case (containing one
 			// ore more notifications)
-			ArrayList<Notification> notificationList = new ArrayList<Notification>();
+			List<Notification> notificationList = new ArrayList<Notification>();
 			if (eventContent instanceof HashSet)
 				notificationList.addAll((Collection<? extends Notification>) eventContent);
 			else
@@ -385,7 +387,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// to store all the fields contained in it
 			for (Notification singleNotification : notificationList)
 			{
-				WebsocketJsonNotification notificationResponse = new WebsocketJsonNotification();
+				WebSocketJsonNotification notificationResponse = new WebSocketJsonNotification();
 				// cause the notification could contain a lot of fields (that we
 				// cannot know in advance) we have to scroll trough all of them
 				// stroring them in an hashmap (notificationContent)
@@ -421,13 +423,14 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 					}
 					catch (IllegalArgumentException | IllegalAccessException e)
 					{
-						e.printStackTrace();
+						//if something went wrong we want to continue for the other notificationField
+						this.logger.log(LogService.LOG_WARNING, e.toString());
 					}
 				}
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebsocketImplementation user : this.websocketEndPoint.getUsers())
+				for (WebSocketImplementation user : this.webSocketEndPoint.getUsers())
 				{
 					if (!notificationContent.isEmpty())
 					{
@@ -436,12 +439,11 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							// here we send the notification only to the users
 							// that have submitted to receive the kind of
 							// notification just received
-							HashMap<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
+							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
 							try
 							{
-								listOfControllable.putAll(this.websocketEndPoint
-										.getListOfNotificationsAndControllablesPerUser(user.toString().substring(
-												user.toString().indexOf("@") + 1)));
+								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user
+										.toString().substring(user.toString().indexOf("@") + 1)));
 							}
 							catch (Exception e)
 							{
@@ -456,8 +458,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 								// deviceUri, then, if there is not this
 								// specific deviceUri in the list we check for
 								// "all" entry
-								ArrayList<String> listOfNotification = listOfControllable
-										.get((String) notificationContent.get("deviceUri"));
+								List<String> listOfNotification = listOfControllable.get((String) notificationContent
+										.get("deviceUri"));
 								if (listOfNotification == null)
 								{
 									listOfNotification = listOfControllable.get("all");
@@ -480,7 +482,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						}
 						catch (IOException e)
 						{
-							e.printStackTrace();
+							//if something went wrong we want to continue for the other users
+							this.logger.log(LogService.LOG_INFO, e.toString());
 						}
 					}
 				}
@@ -510,8 +513,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// store a backup copy of the list of notifications, so, in case of
 		// errors, we can restore it
 		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
-		listOfNotificationsPerUserBackup = this.websocketEndPoint.copyHashMapByValue(this.websocketEndPoint
-				.getListOfNotificationsAndControllables());
+		listOfNotificationsPerUserBackup = this.webSocketEndPoint.copyHashMapByValue(this.webSocketEndPoint
+				.getNotifications());
 		
 		Object notifications;
 		// chech if the notifications received are in json format or not
@@ -532,8 +535,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// if we receive only one single notification we can call directly
 			// the method that does the unregistration that will return true if
 			// the unsubscribtion was successfully completed
-			if (this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
-					controllable, (String) notifications))
+			if (this.webSocketEndPoint.removeNotification(clientId, controllable, (String) notifications))
 				result = "Unregistration completed successfully";
 		}
 		else if (notifications instanceof ArrayNode)
@@ -546,13 +548,12 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			while (iterator.hasNext())
 			{
 				JsonNode current = iterator.next();
-				if (!this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
-						controllable, (String) current.getTextValue()))
+				if (!this.webSocketEndPoint.removeNotification(clientId, controllable, (String) current.getTextValue()))
 				{
 					// if something goes wrong we reset the value copying the
 					// list backed up at the beginning of the unregistration
 					// process returning an error as result
-					this.websocketEndPoint.setListOfNotificationsAndControllables(this.websocketEndPoint
+					this.webSocketEndPoint.setNotifications(this.webSocketEndPoint
 							.copyHashMapByValue(listOfNotificationsPerUserBackup));
 					result = "Unregistration failed";
 					break;
@@ -563,8 +564,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if the notification list is empty the user wants to unsubscribe
 			// all the notifications
-			if (this.websocketEndPoint.removeNotificationFromListOfNotificationsPerControllableAndUser(clientId,
-					controllable, "all"))
+			if (this.webSocketEndPoint.removeNotification(clientId, controllable, "all"))
 				result = "Unregistration completed successfully";
 		}
 		
@@ -572,13 +572,15 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		{
 			// we try to set the result as json but if it generates any kind of
 			// exception we will set it directly as a string
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 			jsonResult.setResult(result);
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			// if it is not possible to parse the result we send it as string
+			// (creating the Json code by hand)
+			this.logger.log(LogService.LOG_WARNING, e.toString());
 			return "{\"result\":\"" + result + "\"}";
 		}
 	}
@@ -604,11 +606,13 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		// depending on the type of registration indicated in the request we
 		// call one different method
-		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		if (this.typeForRegistration != null
+				&& this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
 			return this.notificationRegistration(this.clientIdForRegistration, "all", notifications);
 		}
-		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		if (this.typeForRegistration != null
+				&& this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, "all", notifications);
 		}
@@ -617,14 +621,16 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// above, it means that one or more parameters was missed
 		try
 		{
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 			jsonResult
 					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger
+					.log(LogService.LOG_ERROR,
+							"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
 		}
 	}
@@ -654,11 +660,13 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 	{
 		// depending on the type of registration indicated in the request we
 		// call one different method
-		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationregistration"))
+		if (this.typeForRegistration != null
+				&& this.typeForRegistration.toLowerCase().contains("notificationregistration"))
 		{
 			return this.notificationRegistration(this.clientIdForRegistration, controllable, notifications);
 		}
-		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
+		if (this.typeForRegistration != null
+				&& this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
 		{
 			return this.notificationUnregistration(this.clientIdForRegistration, controllable, notifications);
 		}
@@ -667,14 +675,16 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// above, it means that one or more parameters was missed
 		try
 		{
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 			jsonResult
 					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger
+					.log(LogService.LOG_ERROR,
+							"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
 			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
 		}
 	}
@@ -747,26 +757,25 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 			// at the end of the process that chooses which notifications have
 			// to be subscribed we can call the method that does the real
 			// subscription
-			if (this.websocketEndPoint.putListOfNotificationsPerControllableAndUser(clientId, controllable,
-					notificationsList))
+			if (this.webSocketEndPoint.putNotifications(clientId, controllable, notificationsList))
 				result = "Registration completed successfully";
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger.log(LogService.LOG_ERROR, "Notification registration failed");
 			result = "Registration failed";
 		}
 		
 		// try to convert the result in json format
 		try
 		{
-			WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 			jsonResult.setResult(result);
 			return this.mapper.writeValueAsString(jsonResult);
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			this.logger.log(LogService.LOG_INFO, e.toString());
 			return "{\"result\":\"" + result + "\"}";
 		}
 		
@@ -820,13 +829,13 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		// if the type of the message contains the word "notification" it means
 		// that the right class is this one, otherwise we call the method that
 		// identify the right class
-		if (this.typeForRegistration!= null && this.typeForRegistration.toLowerCase().contains("notification"))
+		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notification"))
 		{
 			clazz = this.getClass();
 		}
 		else
 		{
-			ClassLoader cls = this.websocketEndPoint.getClassloader();
+			ClassLoader cls = this.webSocketEndPoint.getClassloader();
 			clazz = this.getRightClass(endPoint, cls);
 		}
 		String result = "";
@@ -1035,7 +1044,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 				{
 					// depending on the class selected we have to use the right
 					// reference (deviceRESTApi, environmentRESTApi,
-					// ruleEngineRESTApi, or this (WebsocketImplementation))
+					// ruleEngineRESTApi, or this (WebSocketImplementation))
 					if (clazz.toString().toLowerCase().indexOf("device") != -1)
 					{
 						result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
@@ -1127,7 +1136,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							}
 							
 							// we send the result as Json
-							WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 							jsonResult.setResult(resultMessage);
 							try
 							{
@@ -1135,7 +1144,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 							}
 							catch (IOException e1)
 							{
-								e1.printStackTrace();
+								this.logger.log(LogService.LOG_INFO, e.toString());
 								return "{\"result\":\"" + jsonResult + "\"}";
 							}
 						}
@@ -1143,7 +1152,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 					else if (clazz.equals(this.getClass()))
 					{
 						// if the right class is this one
-						// (WebsocketImplementation) but the right method
+						// (WebSocketImplementation) but the right method
 						// doesn't generate a String as result we set the result
 						// as "success" if the method doesn't generate
 						// exceptions
@@ -1162,7 +1171,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						}
 						
 						// we send the result as Json
-						WebsocketJsonInvocationResult jsonResult = new WebsocketJsonInvocationResult();
+						WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
 						jsonResult.setResult(resultMessage);
 						try
 						{
@@ -1170,7 +1179,7 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 						}
 						catch (IOException e1)
 						{
-							e1.printStackTrace();
+							this.logger.log(LogService.LOG_INFO, e1.toString());
 							return "{\"result\":\"" + jsonResult + "\"}";
 						}
 					}
@@ -1212,7 +1221,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			// it (DeviceRESTApi) is not the right class
+			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 		
 		// if the method is not in the DeviceRESTApi class (so if it doesn't
@@ -1228,7 +1238,8 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
+			// it (EnvironmentRESTApi) is not the right class
+			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 		
 		/*
@@ -1241,9 +1252,11 @@ public class WebsocketImplementation implements WebSocket.OnTextMessage
 		 * try { clazz = cls.loadClass(
 		 * "it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi"
 		 * ); if (this.checkClass(clazz, endPoint)) { return clazz; } } catch
-		 * (Exception e) { e.printStackTrace(); }
+		 * (Exception e)
+		 * 
+		 * { //it (RuleEngineRESTApi) is not the right class
+		 * this.logger.log(LogService.LOG_INFO, e.toString()); }
 		 */
-		
 		return null;
 	}
 	

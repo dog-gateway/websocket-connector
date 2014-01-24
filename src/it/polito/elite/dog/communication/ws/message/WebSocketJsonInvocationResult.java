@@ -1,6 +1,6 @@
 package it.polito.elite.dog.communication.ws.message;
 
-public class WebsocketJsonInvocationResult
+public class WebSocketJsonInvocationResult
 {
 	// result of action performed by the server
 	private String result;

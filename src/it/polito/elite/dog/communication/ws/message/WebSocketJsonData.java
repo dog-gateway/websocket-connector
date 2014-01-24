@@ -1,8 +1,8 @@
 package it.polito.elite.dog.communication.ws.message;
 
-public class WebsocketJsonData
+public class WebSocketJsonData
 {
-	// id of the client that ask to connect to the websocket service (generated
+	// id of the client that ask to connect to the webSocket service (generated
 	// by the server)
 	private String clientId;
 	// type of the message sent by the user (possible values: request, response,
