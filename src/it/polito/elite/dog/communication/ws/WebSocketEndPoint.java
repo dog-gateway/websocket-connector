@@ -50,6 +50,9 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// list of users (by instances)
 	private List<WebSocketImplementation> users;
 	// list of notifications per users
+	// the first key contains the deviceUri, the second contains the
+	// controllable Name and the last Array contains the list of notifications
+	// subscribed for the specific user and the specific deviceUri
 	private HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUser;
 	
 	// the service registration handle
@@ -248,7 +251,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (ServletException | NamespaceException e)
 		{
-			//it was not possible to register the servlet
+			// it was not possible to register the servlet
 			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 	}
@@ -324,8 +327,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {boolean} value that indicates if the registration succeded
 	 * 
 	 */
-	public boolean putNotifications(String clientId, String controllable,
-			ArrayList<String> notificationsList)
+	public boolean putNotifications(String clientId, String controllable, ArrayList<String> notificationsList)
 	{
 		// save a backup of the list of notifications because if something goes
 		// wrong we would restore it
@@ -530,6 +532,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {HashMap<String, ArrayList<String>>} object with all the
 	 *         notifications subscribed by a user
 	 * 
+	 *         The first key contains the controllable Name and the last Array
+	 *         contains the list of notifications subscribed for the specific
+	 *         user and the specific deviceUri
+	 * 
 	 */
 	public HashMap<String, ArrayList<String>> getNotificationsPerUser(String clientId)
 	{
@@ -541,6 +547,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * 
 	 * @return a {HashMap<String, HashMap<String, ArrayList<String>>>} object
 	 *         with all the notifications subscribed by all users
+	 * 
+	 *         The first key contains the deviceUri, the second contains the
+	 *         controllable Name and the last Array contains the list of
+	 *         notifications subscribed for the specific user and the specific
+	 *         deviceUri
 	 * 
 	 */
 	public HashMap<String, HashMap<String, ArrayList<String>>> getNotifications()
@@ -561,7 +572,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			//it was not possible to set the list of Notifications
+			// it was not possible to set the list of Notifications
 			this.logger.log(LogService.LOG_ERROR, "It was not possible to set the list of Notifications");
 		}
 	}
@@ -583,8 +594,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {boolean} value that indicates if the removal succeded
 	 * 
 	 */
-	public boolean removeNotification(String clientId,
-			String controllableToRemove, String notificationToRemove)
+	public boolean removeNotification(String clientId, String controllableToRemove, String notificationToRemove)
 	{
 		// set the default result value
 		boolean result = false;
@@ -740,7 +750,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	@Override
 	public void updated(Dictionary<String, ?> properties) throws ConfigurationException
 	{
-		//get the parameters from the configuration file
+		// get the parameters from the configuration file
 		// maybe the received configuration is not for me...
 		if (properties != null)
 		{
