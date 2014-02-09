@@ -1143,7 +1143,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// manage that exception too
 								InvocationTargetException exception = (InvocationTargetException) e;
 								resultMessage = exception.getTargetException().getMessage();
-								if (resultMessage.toLowerCase().contains("ok"))
+								if (resultMessage.toLowerCase().contains("ok") || resultMessage.toLowerCase().contains("created"))
 								{
 									resultMessage = "Command executed successfully";
 								}
@@ -1158,7 +1158,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// manage that exception too
 								WebApplicationException exception = (WebApplicationException) e;
 								resultMessage = exception.getResponse().toString();
-								if (resultMessage.toLowerCase().contains("ok"))
+								if (resultMessage.toLowerCase().contains("ok") || resultMessage.toLowerCase().contains("created"))
 								{
 									resultMessage = "Command executed successfully";
 								}
