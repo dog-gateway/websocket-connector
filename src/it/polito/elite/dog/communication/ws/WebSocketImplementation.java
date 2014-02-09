@@ -204,7 +204,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 			}
 			catch (IOException e)
 			{
-				//it was not possible to open the connection
+				// it was not possible to open the connection
 				this.logger.log(LogService.LOG_INFO, e.toString());
 				// if something goes wrong we remove the user from the list of
 				// users connected to the server
@@ -423,7 +423,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					}
 					catch (IllegalArgumentException | IllegalAccessException e)
 					{
-						//if something went wrong we want to continue for the other notificationField
+						// if something went wrong we want to continue for the
+						// other notificationField
 						this.logger.log(LogService.LOG_WARNING, e.toString());
 					}
 				}
@@ -483,7 +484,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						}
 						catch (IOException e)
 						{
-							//if something went wrong we want to continue for the other users
+							// if something went wrong we want to continue for
+							// the other users
 							this.logger.log(LogService.LOG_INFO, e.toString());
 						}
 					}
@@ -1046,13 +1048,41 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					// depending on the class selected we have to use the right
 					// reference (deviceRESTApi, environmentRESTApi,
 					// ruleEngineRESTApi, or this (WebSocketImplementation))
-					if (clazz.toString().toLowerCase().indexOf("device") != -1)
+					try
 					{
-						result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+						// even if the method should return a String, if the
+						// device or the environment doesn't exist, it return a
+						// 404 NOT Found message as exception, so we have to
+						// intercept the exception
+						if (clazz.toString().toLowerCase().indexOf("device") != -1)
+						{
+							result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+						}
+						if (clazz.toString().toLowerCase().indexOf("environment") != -1)
+						{
+							result = (String) rightMethod.invoke(this.environmentRESTApi.get(),
+									rightArguments.toArray());
+						}
 					}
-					if (clazz.toString().toLowerCase().indexOf("environment") != -1)
+					catch (WebApplicationException | InvocationTargetException e)
 					{
-						result = (String) rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
+						// here we intercept the Exception generated to say
+						// that the requested resource was not found
+						String resultMessage = "The requested resource was not found";
+						
+						
+						// we send the result as Json
+						WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
+						jsonResult.setResult(resultMessage);
+						try
+						{
+							return this.mapper.writeValueAsString(jsonResult);
+						}
+						catch (IOException e1)
+						{
+							this.logger.log(LogService.LOG_INFO, e.toString());
+							return "{\"result\":\"" + jsonResult + "\"}";
+						}
 					}
 					/*
 					 * TODO decomment the following lines to let search through
