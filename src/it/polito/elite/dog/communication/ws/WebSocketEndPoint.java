@@ -50,7 +50,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// list of users (by instances)
 	private List<WebSocketImplementation> users;
 	// list of notifications per users
-	// the first key contains the deviceUri, the second contains the
+	// the first key contains the clientId, the second contains the
 	// controllable Name and the last Array contains the list of notifications
 	// subscribed for the specific user and the specific deviceUri
 	private HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUser;
