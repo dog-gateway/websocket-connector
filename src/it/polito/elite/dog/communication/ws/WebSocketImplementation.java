@@ -1,3 +1,21 @@
+/*
+ * Dog - WebSocket Endpoint
+ * 
+ * Copyright (c) 2013-2014 Teodoro Montanaro
+ * contact: teo.montanaro@gmail.com
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License
+ */
 package it.polito.elite.dog.communication.ws;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
@@ -603,7 +621,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	 * 
 	 */
 	@PUT
-	@Path("/api/devices/notifications")
+	@Path("/api/v1/devices/notifications")
 	public String notificationRegistrationWithoutControllable(Object notifications) throws JsonParseException,
 			JsonMappingException
 	{
@@ -657,7 +675,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	 * 
 	 */
 	@PUT
-	@Path("/api/devices/{controllable}/notifications")
+	@Path("/api/v1/devices/{controllable}/notifications")
 	public String notificationRegistrationWithControllable(@PathParam("controllable") String controllable,
 			Object notifications) throws JsonParseException, JsonMappingException
 	{
@@ -847,8 +865,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		{
 			// now we scroll trough all available methods looking for the
 			// annotations present
-			// if there are both "/api/devides/status" and
-			// "/api/devices/{device-id}" we have to take care to choose the
+			// if there are both "/api/v1/devides/status" and
+			// "/api/v1/devices/{device-id}" we have to take care to choose the
 			// right one
 			Method[] methods = clazz.getDeclaredMethods();
 			Method rightMethod = null;
@@ -858,7 +876,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 				// we start to check for the annotation from the point to which
 				// the getRightClass arrived, so we copy the number indicating
 				// the part of path already analized
-				// (for example after api/devices/)
+				// (for example after api/v1/devices/)
 				int numberOfAnalizedPartsOfEndPoint = this.numberOfClassParameters;
 				// we check if the analyzed method has the right action
 				// defined (GET, PUT, POST or DELETE)
@@ -912,8 +930,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// for all the parts that makes up the path
 								for (int k = 0; k < (this.endPointParts.length - this.numberOfClassParameters); k++)
 								{
-									// if there are both "/api/devides/status"
-									// and "/api/devices/{device-id}" we have to
+									// if there are both "/api/v1/devides/status"
+									// and "/api/v1/devices/{device-id}" we have to
 									// take care to choose the right one
 									if (methodAnnotationParts[k]
 											.compareTo(this.endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
@@ -953,9 +971,9 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 											// is the wrong method or that we
 											// have
 											// already chosen the method without
-											// parameters (/api/devices/status
+											// parameters (/api/v1/devices/status
 											// instead of
-											// /api/devices/{devide-id})
+											// /api/v1/devices/{devide-id})
 											break;
 									}
 									numberOfAnalizedPartsOfEndPoint++;
@@ -991,10 +1009,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						else
 						{
 							// if the endPoint has not other parts after the
-							// path used to select the class (/api/devices or
-							// /api/environment) it means that the method we are
-							// looking for has to answer to path /api/devices or
-							// /api/environment
+							// path used to select the class (/api/v1/devices or
+							// /api/v1/environment) it means that the method we are
+							// looking for has to answer to path /api/v1/devices or
+							// /api/v1/environment
 							if ((this.endPointParts.length - numberOfAnalizedPartsOfEndPoint) == 0)
 							{
 								// we have to check if the output of the method
@@ -1223,8 +1241,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	
 	/**
 	 * Get the class containing the annotation we are looking for (at this level
-	 * we look only for the first part of endPoint (api/devices for
-	 * DeviceRESTApi and api/devices for EnvironmentRESTApi)
+	 * we look only for the first part of endPoint (api/v1/devices for
+	 * DeviceRESTApi and api/v1/devices for EnvironmentRESTApi)
 	 * 
 	 * @param endPoint
 	 *            Path for which we are looking for (that denote the method that
