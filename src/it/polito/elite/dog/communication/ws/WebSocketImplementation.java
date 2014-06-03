@@ -344,9 +344,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						// send the message just created
 						this.connectionInstance.connection.sendMessage(response);
 					}
-					catch (ClassNotFoundException | SecurityException | NoSuchMethodException
-							| IllegalArgumentException | InstantiationException | IllegalAccessException
-							| InvocationTargetException e)
+					catch (Exception e)
 					{
 						this.logger.log(LogService.LOG_INFO, e.toString());
 					}
@@ -439,7 +437,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						// insert the information acquired in the list
 						notificationContent.put(notificationFieldName, notificationFieldValueFinal);
 					}
-					catch (IllegalArgumentException | IllegalAccessException e)
+					catch (Exception e)
 					{
 						// if something went wrong we want to continue for the
 						// other notificationField
@@ -1082,7 +1080,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 									rightArguments.toArray());
 						}
 					}
-					catch (WebApplicationException | InvocationTargetException e)
+					catch (Exception e)
 					{
 						// here we intercept the Exception generated to say
 						// that the requested resource was not found
@@ -1148,7 +1146,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							 * }
 							 */
 						}
-						catch (WebApplicationException | InvocationTargetException e)
+						catch (Exception e)
 						{
 							// here we intercept the Exception generated to say
 							// if the operation was executed correctly

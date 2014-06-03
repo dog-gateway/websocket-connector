@@ -3,7 +3,7 @@ Bundle-ManifestVersion: 2
 Bundle-Name: Ws
 Bundle-SymbolicName: it.polito.elite.dog.communication.ws
 Bundle-Version: 1.0.0.qualifier
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: it.polito.elite.dog.communication.rest.device.api,
  it.polito.elite.dog.communication.rest.environment.api,
  it.polito.elite.dog.core.devicefactory.api;version="1.0.0",

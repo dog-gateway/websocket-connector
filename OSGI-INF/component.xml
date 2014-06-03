@@ -8,7 +8,7 @@
       <provide interface="org.osgi.service.event.EventHandler"/>
       <provide interface="org.osgi.service.cm.ManagedService"/>
    </service>
-   <property name="event.topics" type="String" value="it/polito/elite/domotics/model/notification/*">
+   <property name="event.topics" type="String" value="it/polito/elite/dog/core/library/model/notification/*">
    </property>
    <property name="service.pid" type="String" value="it.polito.elite.dog.communication.ws"/>
 	   

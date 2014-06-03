@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -44,7 +43,6 @@ import org.osgi.service.cm.ManagedService;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
 import org.osgi.service.http.HttpService;
-import org.osgi.service.http.NamespaceException;
 import org.osgi.service.log.LogService;
 
 public class WebSocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
@@ -95,9 +93,9 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		
 		// init the Device Rest Api atomic reference
-		this.deviceRestApi = new AtomicReference<>();
+		this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
 		// init the Environment Rest Api atomic reference
-		this.environmentRestApi = new AtomicReference<>();
+		this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
 		
 		/*
 		 * TODO decomment all the TODO lines to let search through the
@@ -106,7 +104,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		 */
 		
 		// init the list of notifications per users
-		this.listOfNotificationsPerUser = new HashMap<>();
+		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String,ArrayList<String>>>();
 		
 		// init the list of users (by instances)
 		this.users = new ArrayList<WebSocketImplementation>();
@@ -267,7 +265,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		{
 			this.http.registerServlet(this.webSocketPath, this, null, null);
 		}
-		catch (ServletException | NamespaceException e)
+		catch (Exception e)
 		{
 			// it was not possible to register the servlet
 			this.logger.log(LogService.LOG_INFO, e.toString());
