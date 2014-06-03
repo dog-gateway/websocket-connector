@@ -1,8 +1,7 @@
 /*
  * Dog - WebSocket Endpoint
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +19,12 @@ package it.polito.elite.dog.communication.websocket;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
@@ -45,29 +46,32 @@ import org.osgi.service.event.EventHandler;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.log.LogService;
 
+/**
+ * 
+ * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
 public class WebSocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
 {
-	
 	// reference for the DeviceRESTApi
 	private AtomicReference<DeviceRESTApi> deviceRestApi;
 	// reference for the EnvironmentRESTApi
 	private AtomicReference<EnvironmentRESTApi> environmentRestApi;
+	// reference for the RuleEngineRESTApi
+	private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	// reference for the WebSocketImplementation
 	private WebSocketImplementation webSocketImplementation;
+	// reference for the Http service
+	private AtomicReference<HttpService> http;
 	
-	/*
-	 * TODO decomment all the TODO lines to let search through the
-	 * RuleEngineRESTApi class
-	 * 
-	 * // reference for the RuleEngineRESTApi private RuleEngineRESTApi
-	 * ruleEngineRESTApi;
-	 */
-	
-	// list of users (by instances)
+	// list of connected users (by instances)
 	private List<WebSocketImplementation> users;
+	
 	// list of notifications per users
 	// the first key contains the clientId, the second contains the
-	// controllable Name and the last Array contains the list of notifications
+	// controllable name and the last Array contains the list of notifications
 	// subscribed for the specific user and the specific deviceUri
 	private HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUser;
 	
@@ -86,38 +90,33 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// path at which the server will be accessible
 	private String webSocketPath;
 	
+	// serial id (the class is serializable)
 	private static final long serialVersionUID = 1L;
-	private HttpService http;
 	
 	public WebSocketEndPoint()
 	{
-		
-		// init the Device Rest Api atomic reference
+		// init data structures for referenced services
 		this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
-		// init the Environment Rest Api atomic reference
 		this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
-		
-		/*
-		 * TODO decomment all the TODO lines to let search through the
-		 * RuleEngineRESTApi class // init the RuleEngine Rest Api atomic
-		 * reference this.ruleEngineRESTApi = new AtomicReference<>();
-		 */
+		this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
 		
 		// init the list of notifications per users
-		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String,ArrayList<String>>>();
+		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		
 		// init the list of users (by instances)
-		this.users = new ArrayList<WebSocketImplementation>();
+		this.users = Collections.synchronizedList(new ArrayList<WebSocketImplementation>());
 		
 		// init default value for the path at which the server will be
-		// accessible (it is the part that follow server.com:8080)
+		// accessible (it is the part that follow server-name.ext:port-number)
 		this.webSocketPath = "/dogws";
-		
 	}
 	
 	/**
+	 * Bundle activation, stores a reference to the context object passed by the
+	 * framework to get access to system data, e.g., installed bundles, etc.
 	 * 
 	 * @param context
+	 *            the OSGi bundle context
 	 */
 	public void activate(BundleContext context)
 	{
@@ -132,7 +131,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
 		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
 		
-		// init the logger with a null logger
+		// init the logger
 		this.logger = new LogHelper(this.context);
 		
 		// log the activation
@@ -205,13 +204,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the RuleEngineRESTApi service to add
 	 */
 	
-	/*
-	 * TODO decomment all the TODO lines to let search through the
-	 * RuleEngineRESTApi class public void
-	 * addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) { // store a
-	 * reference to the EnvironmentRESTApi service
-	 * this.ruleEngineRESTApi.set(ruleEngineRESTApi); }
-	 */
+	public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
+	{
+		// store a reference to the EnvironmentRESTApi service
+		this.ruleEngineRESTApi.set(ruleEngineRESTApi);
+	}
 	
 	/**
 	 * Unbind the RuleEngineRESTApi service
@@ -219,12 +216,36 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param ruleEngineRESTApi
 	 *            the RuleEngineRESTApi service to remove
 	 */
-	/*
-	 * TODO decomment all the TODO lines to let search through the
-	 * RuleEngineRESTApi class public void
-	 * removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) {
-	 * this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null); }
+	public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
+	{
+		this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null);
+	}
+	
+	/**
+	 * Bind the Http Service
+	 * 
+	 * The Http Service allows other bundles in the OSGi environment to
+	 * dynamically register resources and servlets into the URI namespace of
+	 * Http Service. A bundle may later unregister its resources or servlets.
+	 * 
+	 * @param http
+	 *            the OSGi Http Service
 	 */
+	public void addedHttpService(HttpService http)
+	{
+		this.http.set(http);
+	}
+	
+	/**
+	 * Unbind the Http Service
+	 * 
+	 * @param http
+	 *            the OSGi Http Service
+	 */
+	public void removedHttpService(HttpService http)
+	{
+		this.http.compareAndSet(http, null);
+	}
 	
 	/*
 	 * (non-Javadoc)
@@ -237,21 +258,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
 	{
 		// Method used every time a user try to connect to the server
-		
-		this.logger.log(LogService.LOG_INFO, "IP: " + req.getRemoteAddr());
+		this.logger.log(LogService.LOG_DEBUG, "New connection from IP: " + req.getRemoteAddr());
 		
 		// create an instance of WebSocketImplementation
-		// TODO when you will decomment the line that follow this one, please
-		// comment this one
 		this.webSocketImplementation = new WebSocketImplementation(this.context, this, this.deviceRestApi,
-				this.environmentRestApi);
-		
-		/*
-		 * TODO decomment all the TODO lines to let search through the
-		 * RuleEngineRESTApi class this.webSocketImplementation = new
-		 * WebSocketImplementation(this.context, this, this.deviceRestApi,
-		 * this.environmentRestApi, this.ruleEngineRESTApi);
-		 */
+				this.environmentRestApi, this.ruleEngineRESTApi);
 		
 		return this.webSocketImplementation;
 	}
@@ -263,28 +274,13 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		try
 		{
-			this.http.registerServlet(this.webSocketPath, this, null, null);
+			this.http.get().registerServlet(this.webSocketPath, this, null, null);
 		}
 		catch (Exception e)
 		{
 			// it was not possible to register the servlet
-			this.logger.log(LogService.LOG_INFO, e.toString());
+			this.logger.log(LogService.LOG_ERROR, "Impossible to register the servlet", e);
 		}
-	}
-	
-	/**
-	 * The Http Service allows other bundles in the OSGi environment to
-	 * dynamically register resources and servlets into the URI namespace of
-	 * Http Service. A bundle may later unregister its resources or servlets.
-	 * This method is called after the registration of the service to store the
-	 * instance in our variable
-	 * 
-	 * @param http
-	 *            HttpService
-	 */
-	public void addHttp(HttpService http)
-	{
-		this.http = http;
 	}
 	
 	/**
@@ -293,7 +289,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public void addUser(WebSocketImplementation instance)
+	public synchronized void addUser(WebSocketImplementation instance)
 	{
 		this.users.add(instance);
 	}
@@ -305,21 +301,22 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public void removeUser(WebSocketImplementation instance)
+	public synchronized void removeUser(WebSocketImplementation instance)
 	{
 		// we remove the user from the list of users
 		this.users.remove(instance);
 		// remove all the notifications subscribed by the user (we take the
 		// userId from instance: we take the last part of the instance: the part
 		// that is after the @)
-		this.listOfNotificationsPerUser.remove(instance.toString().substring(instance.toString().indexOf("@") + 1));
+		String stringifyInstance = instance.toString();
+		this.listOfNotificationsPerUser.remove(stringifyInstance.substring(stringifyInstance.indexOf("@") + 1));
 	}
 	
 	/**
 	 * Get the list of all users (obtaining their instance)
 	 * 
-	 * @return a {List<WebSocketImplementation>} object with all the users'
-	 *         instance
+	 * @return a {@link List} of {@link WebSocketImplementation} objects with
+	 *         all the users' instance
 	 */
 	public List<WebSocketImplementation> getUsers()
 	{
@@ -349,6 +346,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		// wrong we would restore it
 		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		listOfNotificationsPerUserBackup = this.copyHashMapByValue(this.listOfNotificationsPerUser);
+		
 		// set the default result value
 		boolean result = false;
 		try
@@ -356,7 +354,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 			// store all the notifications subscribed by the user
 			HashMap<String, ArrayList<String>> existingControllableList = this.listOfNotificationsPerUser.get(clientId);
 			// set the default result to true (because we would store a list and
-			// in this case we have to return false only if something goes wrong
+			// in this case we have to return false only if something goes
+			// wrong)
 			result = true;
 			if (existingControllableList != null && !existingControllableList.isEmpty())
 			{
@@ -524,7 +523,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			this.logger.log(LogService.LOG_INFO, e.toString());
+			this.logger.log(LogService.LOG_ERROR, "Exception: ", e);
 			result = false;
 		}
 		if (!result)
@@ -535,6 +534,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 			this.listOfNotificationsPerUser.clear();
 			this.listOfNotificationsPerUser = this.copyHashMapByValue(listOfNotificationsPerUserBackup);
 		}
+		
 		return result;
 	}
 	
@@ -545,11 +545,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the id of a user (it is the last part of the instance (after
 	 *            the @))
 	 * 
-	 * @return a {HashMap<String, ArrayList<String>>} object with all the
-	 *         notifications subscribed by a user
+	 * @return a {@link HashMap} object with all the notifications subscribed by
+	 *         a user
 	 * 
-	 *         The first key contains the controllable Name and the last Array
-	 *         contains the list of notifications subscribed for the specific
+	 *         The first key contains the controllable name and the value an
+	 *         array with the list of notifications subscribed for the specific
 	 *         user and the specific deviceUri
 	 * 
 	 */
@@ -561,13 +561,13 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	/**
 	 * Get the entire list of all the notifications subscribed
 	 * 
-	 * @return a {HashMap<String, HashMap<String, ArrayList<String>>>} object
-	 *         with all the notifications subscribed by all users
+	 * @return a {@link HashMap} of {@link HashMap} object with all the
+	 *         notifications subscribed by all users
 	 * 
-	 *         The first key contains the deviceUri, the second contains the
-	 *         controllable Name and the last Array contains the list of
-	 *         notifications subscribed for the specific user and the specific
-	 *         deviceUri
+	 *         The first key contains the deviceUri, the second key contains the
+	 *         controllable Name and the value of the second map is an array
+	 *         with the list of notifications subscribed for the specific user
+	 *         and the specific deviceUri
 	 * 
 	 */
 	public HashMap<String, HashMap<String, ArrayList<String>>> getNotifications()
@@ -578,7 +578,6 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	/**
 	 * Set the entire list of all the notifications subscribed with the passed
 	 * value
-	 * 
 	 */
 	public void setNotifications(HashMap<String, HashMap<String, ArrayList<String>>> oldList)
 	{
@@ -589,7 +588,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		catch (Exception e)
 		{
 			// it was not possible to set the list of Notifications
-			this.logger.log(LogService.LOG_ERROR, "It was not possible to set the list of Notifications");
+			this.logger.log(LogService.LOG_ERROR, "It was not possible to set the list of Notifications", e);
 		}
 	}
 	
@@ -614,6 +613,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		// set the default result value
 		boolean result = false;
+		
 		try
 		{
 			// get the existing list of notifications subscribed by the user
@@ -723,7 +723,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		}
 		catch (Exception e)
 		{
-			this.logger.log(LogService.LOG_WARNING, e.toString());
+			this.logger.log(LogService.LOG_WARNING, "Exception in unsubscribing a notification", e);
+			
 			result = false;
 		}
 		return result;
@@ -754,8 +755,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	public void handleEvent(Event event)
 	{
 		// method that handle the event generated for notification
-		if (this.webSocketImplementation != null && this.users.size() != 0)
+		if ((this.webSocketImplementation != null) && (this.users.size() != 0))
+		{
 			this.webSocketImplementation.sendNotification(event);
+		}
 	}
 	
 	/*
@@ -770,19 +773,19 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		// maybe the received configuration is not for me...
 		if (properties != null)
 		{
-			String webSocketPathTemp = "";
+			String temporaryPath = "";
 			// maybe the reading process from the file could have some troubles
 			try
 			{
-				webSocketPathTemp = (String) properties.get("WEBSOCKETPATH");
-				if ((!webSocketPathTemp.isEmpty()) && (webSocketPathTemp != null))
+				temporaryPath = (String) properties.get("WEBSOCKETPATH");
+				if ((!temporaryPath.isEmpty()) && (temporaryPath != null))
 				{
-					this.webSocketPath = webSocketPathTemp;
+					this.webSocketPath = temporaryPath;
 				}
 			}
 			catch (Exception e)
 			{
-				this.logger.log(LogService.LOG_WARNING, e.toString());
+				this.logger.log(LogService.LOG_WARNING, "Error in parsing the required WebSocket Path...", e);
 			}
 		}
 		// even if we cannot read the value from the file we instantiate the
@@ -792,7 +795,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	}
 	
 	/**
-	 * Clone an Hashmap containing another hashmap *
+	 * Clone an HashMap containing another HashMap
 	 * 
 	 * @param hashMapToCopy
 	 *            the hashMap that has to be copied
@@ -806,6 +809,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	{
 		HashMap<String, HashMap<String, ArrayList<String>>> newHashMap = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		Collection<String> allExistingKeys = hashMapToCopy.keySet();
+		
 		if (!allExistingKeys.isEmpty())
 		{
 			for (String singleKey : allExistingKeys)

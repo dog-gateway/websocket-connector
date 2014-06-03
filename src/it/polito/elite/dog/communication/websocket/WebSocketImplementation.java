@@ -1,8 +1,7 @@
 /*
  * Dog - WebSocket Endpoint
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +19,7 @@ package it.polito.elite.dog.communication.websocket;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonNotification;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonRequest;
@@ -65,6 +65,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 
+/**
+ * 
+ * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
 public class WebSocketImplementation implements WebSocket.OnTextMessage
 {
 	// instance of the connection used to obtain the user id
@@ -88,14 +95,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	private AtomicReference<DeviceRESTApi> deviceRESTApi;
 	// reference for the EnvironmentRESTApi
 	private AtomicReference<EnvironmentRESTApi> environmentRESTApi;
-	
-	/*
-	 * TODO uncomment this part to let search through the RuleEngineRESTApi
-	 * class
-	 * 
-	 * // reference for the RuleEngineRESTApi private
-	 * AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
-	 */
+	// reference for the RuleEngineRESTApi
+	private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	
 	// the service logger
 	private LogHelper logger;
@@ -114,35 +115,17 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	private String typeForRegistration;
 	
 	public WebSocketImplementation(BundleContext context, WebSocketEndPoint webSocketEndPoint,
-			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi)
+			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi,
+			AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi)
 	{
-		/*
-		 * TODO decomment the following lines (substitute it to the previous
-		 * one)
-		 * 
-		 * TODO and add the service to component.xml file to let search through
-		 * the RuleEngineRESTApi class
-		 * 
-		 * public WebSocketImplementation(BundleContext context,
-		 * WebSocketEndPoint webSocketEndPoint, AtomicReference<DeviceRESTApi>
-		 * deviceRESTApi, AtomicReference<EnvironmentRESTApi>
-		 * environmentRESTApi, AtomicReference<RuleEngineRESTApi>
-		 * ruleEngineRESTApi) {
-		 */
 		// init the WebSocketEndPoint reference
 		this.webSocketEndPoint = webSocketEndPoint;
 		// init the Device Rest Api atomic reference
 		this.deviceRESTApi = deviceRESTApi;
 		// init the Environment Rest Api atomic reference
 		this.environmentRESTApi = environmentRESTApi;
-		
-		/*
-		 * TODO decomment the following line to let search through the
-		 * RuleEngineRESTApi class
-		 * 
-		 * // init the RuleEngine REST Api atomic reference
-		 * this.ruleEngineRESTApi = ruleEngineRESTApi;
-		 */
+		// init the RuleEngine REST Api atomic reference
+		this.ruleEngineRESTApi = ruleEngineRESTApi;
 		
 		// init the variable used to store the type of received message for the
 		// notification registration
@@ -178,7 +161,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * method called when the user close the connection
+	 * Method called when the user close the connection
 	 * 
 	 */
 	@Override
@@ -191,7 +174,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * method called when the user open the connection
+	 * Method called when the user open the connection
 	 * 
 	 * @param connection
 	 * 
@@ -206,7 +189,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		
 		// add the user to the list of users connected to the system
 		this.webSocketEndPoint.addUser(this);
-		this.logger.log(LogService.LOG_INFO, "Connection Protocol: " + connection.getProtocol());
+		this.logger.log(LogService.LOG_DEBUG, "Connection Protocol: " + connection.getProtocol());
 		if (this.connection.isOpen())
 		{
 			try
@@ -232,7 +215,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * method called when the user send a message to the server
+	 * Method called when the user send a message to the server
 	 * 
 	 * @param data
 	 *            Received message
@@ -290,7 +273,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						// notification request but the previous request was a
 						// notification one, it is necessary to reset the type
 						// value, otherwise the method will recognize it as a
-						// notification one
+						// notification one)
 						this.typeForRegistration = type;
 						// set to 0 the variable by which we usually count the
 						// initial parts of path that indicates the class
@@ -303,7 +286,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						// that invoke the right method indicated by Path
 						// annotation
 						result = this.invokeMethodByAnnotation(endPoint, action, parameters);
-						this.logger.log(LogService.LOG_INFO, "Sending data: " + result);
+						
+						// debug
+						this.logger.log(LogService.LOG_DEBUG, "Sending data: " + result);
+						
 						// transform the result in a Json message
 						WebSocketJsonResponse jsonResponse = new WebSocketJsonResponse();
 						if (!clientId.isEmpty())
@@ -324,7 +310,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							result = this.mapper.writeValueAsString(jsonResult);
 						}
 						Object resultObject;
-						// if the result is not a json object the readTree
+						// if the result is not a Json object the readTree
 						// method generates an exception that we intercept to
 						// insert the result as string in the answer
 						try
@@ -346,7 +332,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					}
 					catch (Exception e)
 					{
-						this.logger.log(LogService.LOG_INFO, e.toString());
+						this.logger.log(LogService.LOG_WARNING, "Exception in invoking some REST API methods", e);
 					}
 				}
 				else
@@ -365,9 +351,9 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					this.connectionInstance.connection.sendMessage(response);
 				}
 			}
-			catch (IOException e1)
+			catch (IOException ex)
 			{
-				this.logger.log(LogService.LOG_INFO, e1.toString());
+				this.logger.log(LogService.LOG_ERROR, "Error in handling messages", ex);
 			}
 		}
 	}
@@ -441,7 +427,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					{
 						// if something went wrong we want to continue for the
 						// other notificationField
-						this.logger.log(LogService.LOG_WARNING, e.toString());
+						this.logger.log(LogService.LOG_WARNING,
+								"Ops! Something goes wrong in parsing a notification... skip!", e);
 					}
 				}
 				// the Event Handler is executed only once (on the last
@@ -466,7 +453,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							{
 								// if the list is null it has to continue
 								// without copying the list
-								this.logger.log(LogService.LOG_INFO, "The list of notifications is empty");
+								this.logger.log(LogService.LOG_WARNING, "The list of notifications is empty");
 							}
 							// we send only the right notifications checking the
 							// list
@@ -502,7 +489,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						{
 							// if something went wrong we want to continue for
 							// the other users
-							this.logger.log(LogService.LOG_INFO, e.toString());
+							this.logger.log(LogService.LOG_WARNING, "Error handling notification content, skip!", e);
 						}
 					}
 				}
@@ -599,7 +586,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		{
 			// if it is not possible to parse the result we send it as string
 			// (creating the Json code by hand)
-			this.logger.log(LogService.LOG_WARNING, e.toString());
+			this.logger.log(LogService.LOG_WARNING, "Impossible to parse the result we send as a string", e);
 			return "{\"result\":\"" + result + "\"}";
 		}
 	}
@@ -794,7 +781,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			this.logger.log(LogService.LOG_INFO, e.toString());
+			this.logger.log(LogService.LOG_ERROR, "Impossible to convert an object in JSON", e);
 			return "{\"result\":\"" + result + "\"}";
 		}
 		
@@ -928,8 +915,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// for all the parts that makes up the path
 								for (int k = 0; k < (this.endPointParts.length - this.numberOfClassParameters); k++)
 								{
-									// if there are both "/api/v1/devides/status"
-									// and "/api/v1/devices/{device-id}" we have to
+									// if there are both
+									// "/api/v1/devides/status"
+									// and "/api/v1/devices/{device-id}" we have
+									// to
 									// take care to choose the right one
 									if (methodAnnotationParts[k]
 											.compareTo(this.endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
@@ -969,7 +958,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 											// is the wrong method or that we
 											// have
 											// already chosen the method without
-											// parameters (/api/v1/devices/status
+											// parameters
+											// (/api/v1/devices/status
 											// instead of
 											// /api/v1/devices/{devide-id})
 											break;
@@ -1008,8 +998,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						{
 							// if the endPoint has not other parts after the
 							// path used to select the class (/api/v1/devices or
-							// /api/v1/environment) it means that the method we are
-							// looking for has to answer to path /api/v1/devices or
+							// /api/v1/environment) it means that the method we
+							// are
+							// looking for has to answer to path /api/v1/devices
+							// or
 							// /api/v1/environment
 							if ((this.endPointParts.length - numberOfAnalizedPartsOfEndPoint) == 0)
 							{
@@ -1079,13 +1071,17 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							result = (String) rightMethod.invoke(this.environmentRESTApi.get(),
 									rightArguments.toArray());
 						}
+						if (clazz.toString().toLowerCase().indexOf("rule") != -1)
+						{
+							result = (String) rightMethod
+									.invoke(this.ruleEngineRESTApi.get(), rightArguments.toArray());
+						}
 					}
 					catch (Exception e)
 					{
 						// here we intercept the Exception generated to say
 						// that the requested resource was not found
 						String resultMessage = "The requested resource was not found";
-						
 						
 						// we send the result as Json
 						WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
@@ -1100,14 +1096,6 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							return "{\"result\":\"" + jsonResult + "\"}";
 						}
 					}
-					/*
-					 * TODO decomment the following lines to let search through
-					 * the RuleEngineRESTApi class if
-					 * (clazz.toString().toLowerCase().indexOf("rule") != -1) {
-					 * result = (String)
-					 * rightMethod.invoke(this.ruleEngineRESTApi.get(),
-					 * rightArguments.toArray()); }
-					 */
 					if (clazz.equals(this.getClass()))
 					{
 						result = (String) rightMethod.invoke(this, rightArguments.toArray());
@@ -1132,19 +1120,11 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							{
 								rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
 							}
-							/*
-							 * TODO decomment the following lines to let search
-							 * through the RuleEngineRESTApi class
-							 * 
-							 * if
-							 * (clazz.toString().toLowerCase().contains("rule"))
-							 * {
-							 * 
-							 * rightMethod.invoke(this.ruleEngineRESTApi.get(),
-							 * rightArguments.toArray());
-							 * 
-							 * }
-							 */
+							if (clazz.toString().toLowerCase().contains("rule"))
+							{
+								rightMethod.invoke(this.ruleEngineRESTApi.get(), rightArguments.toArray());
+							}
+							
 						}
 						catch (Exception e)
 						{
@@ -1159,7 +1139,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// manage that exception too
 								InvocationTargetException exception = (InvocationTargetException) e;
 								resultMessage = exception.getTargetException().getMessage();
-								if (resultMessage.toLowerCase().contains("ok") || resultMessage.toLowerCase().contains("created"))
+								if (resultMessage.toLowerCase().contains("ok")
+										|| resultMessage.toLowerCase().contains("created"))
 								{
 									resultMessage = "Command executed successfully";
 								}
@@ -1174,7 +1155,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 								// manage that exception too
 								WebApplicationException exception = (WebApplicationException) e;
 								resultMessage = exception.getResponse().toString();
-								if (resultMessage.toLowerCase().contains("ok") || resultMessage.toLowerCase().contains("created"))
+								if (resultMessage.toLowerCase().contains("ok")
+										|| resultMessage.toLowerCase().contains("created"))
 								{
 									resultMessage = "Command executed successfully";
 								}
@@ -1289,21 +1271,20 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 		
-		/*
-		 * TODO decomment these lines to let search through the
-		 * RuleEngineRESTApi class if the method is not in the DeviceRESTApi
-		 * class and in the EnvironmentRESTApi class (so if it doesn't return),
-		 * we look for it in the RulesEngineApi class
-		 * 
-		 * 
-		 * try { clazz = cls.loadClass(
-		 * "it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi"
-		 * ); if (this.checkClass(clazz, endPoint)) { return clazz; } } catch
-		 * (Exception e)
-		 * 
-		 * { //it (RuleEngineRESTApi) is not the right class
-		 * this.logger.log(LogService.LOG_INFO, e.toString()); }
-		 */
+		try
+		{
+			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi");
+			if (this.checkClass(clazz, endPoint))
+			{
+				return clazz;
+			}
+		}
+		catch (Exception e)
+		{ 
+			// it (RuleEngineRESTApi) is not the right class
+			this.logger.log(LogService.LOG_INFO, e.toString());
+		}
+		
 		return null;
 	}
 	
