@@ -16,22 +16,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package it.polito.elite.dog.communication.ws.message;
+package it.polito.elite.dog.communication.websocket.message;
 
-public class WebSocketJsonInvocationResult
+import java.util.HashMap;
+
+public class WebSocketJsonNotification extends WebSocketJsonData
 {
-	// result of action performed by the server
-	private String result;
+	// content of the notification
+	private HashMap<String, String> notification;
 	
-	// get "result"
-	public String getResult()
+	// get notification
+	public HashMap<String, String> getNotification()
 	{
-		return result;
+		return notification;
 	}
 	
-	// setter for "result"
-	public void setResult(String result)
+	// setter for notification
+	public void setNotification(HashMap<String, String> notification)
 	{
-		this.result = result;
+		this.notification = notification;
 	}
+	
 }

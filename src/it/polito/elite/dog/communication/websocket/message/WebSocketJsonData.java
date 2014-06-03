@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package it.polito.elite.dog.communication.ws.message;
+package it.polito.elite.dog.communication.websocket.message;
 
 public class WebSocketJsonData
 {

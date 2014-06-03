@@ -16,14 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-package it.polito.elite.dog.communication.ws;
+package it.polito.elite.dog.communication.websocket;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-import it.polito.elite.dog.communication.ws.message.WebSocketJsonInvocationResult;
-import it.polito.elite.dog.communication.ws.message.WebSocketJsonNotification;
-import it.polito.elite.dog.communication.ws.message.WebSocketJsonRequest;
-import it.polito.elite.dog.communication.ws.message.WebSocketJsonResponse;
+import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
+import it.polito.elite.dog.communication.websocket.message.WebSocketJsonNotification;
+import it.polito.elite.dog.communication.websocket.message.WebSocketJsonRequest;
+import it.polito.elite.dog.communication.websocket.message.WebSocketJsonResponse;
 import it.polito.elite.dog.core.library.model.notification.Notification;
 import it.polito.elite.dog.core.library.util.LogHelper;
 

@@ -1,8 +1,8 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: Ws
-Bundle-SymbolicName: it.polito.elite.dog.communication.ws
-Bundle-Version: 1.0.0.qualifier
+Bundle-Name: it.polito.elite.dog.communication.websocket.api
+Bundle-SymbolicName: it.polito.elite.dog.communication.websocket.api
+Bundle-Version: 1.0.0
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: it.polito.elite.dog.communication.rest.device.api,
  it.polito.elite.dog.communication.rest.environment.api,
