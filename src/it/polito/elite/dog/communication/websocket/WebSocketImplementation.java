@@ -19,7 +19,7 @@ package it.polito.elite.dog.communication.websocket;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
+//import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonNotification;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonRequest;
@@ -96,7 +96,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	// reference for the EnvironmentRESTApi
 	private AtomicReference<EnvironmentRESTApi> environmentRESTApi;
 	// reference for the RuleEngineRESTApi
-	private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
+	//private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	
 	// the service logger
 	private LogHelper logger;
@@ -115,8 +115,8 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	private String typeForRegistration;
 	
 	public WebSocketImplementation(BundleContext context, WebSocketEndPoint webSocketEndPoint,
-			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi,
-			AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi)
+			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi/*,
+			AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi*/)
 	{
 		// init the WebSocketEndPoint reference
 		this.webSocketEndPoint = webSocketEndPoint;
@@ -125,7 +125,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		// init the Environment Rest Api atomic reference
 		this.environmentRESTApi = environmentRESTApi;
 		// init the RuleEngine REST Api atomic reference
-		this.ruleEngineRESTApi = ruleEngineRESTApi;
+		//this.ruleEngineRESTApi = ruleEngineRESTApi;
 		
 		// init the variable used to store the type of received message for the
 		// notification registration
@@ -1071,11 +1071,11 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							result = (String) rightMethod.invoke(this.environmentRESTApi.get(),
 									rightArguments.toArray());
 						}
-						if (clazz.toString().toLowerCase().indexOf("rule") != -1)
+						/*if (clazz.toString().toLowerCase().indexOf("rule") != -1)
 						{
 							result = (String) rightMethod
 									.invoke(this.ruleEngineRESTApi.get(), rightArguments.toArray());
-						}
+						}*/
 					}
 					catch (Exception e)
 					{
@@ -1120,10 +1120,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 							{
 								rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
 							}
-							if (clazz.toString().toLowerCase().contains("rule"))
+							/*if (clazz.toString().toLowerCase().contains("rule"))
 							{
 								rightMethod.invoke(this.ruleEngineRESTApi.get(), rightArguments.toArray());
-							}
+							}*/
 							
 						}
 						catch (Exception e)

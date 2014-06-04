@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" activate="activate" name="it.polito.elite.dog.communication.websocket.api">
-   <implementation class="it.polito.elite.dog.communication.websocket.WebSocketEndPoint"/>
-   <reference bind="addedHttpService" cardinality="1..1" interface="org.osgi.service.http.HttpService" name="HttpService" policy="static" unbind="removedHttpService"/>
+   <implementation class="it.polito.elite.dog.communication.websocket.WebSocketEndPoint"/><reference bind="addedHttpService" cardinality="1..1" interface="org.osgi.service.http.HttpService" name="HttpService" policy="static" unbind="removedHttpService"/>
    <reference bind="addedDeviceRESTApi" cardinality="1..1" interface="it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi" name="DeviceRESTApi" policy="static" unbind="removedDeviceRESTApi"/>
    <reference bind="addedEnvironmentRESTApi" cardinality="1..1" interface="it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi" name="EnvironmentRESTApi" policy="static" unbind="removedEnvironmentRESTApi"/>
    <service>
@@ -10,7 +9,6 @@
    </service>
    <property name="event.topics" type="String" value="it/polito/elite/dog/core/library/model/notification/*">
    </property>
-   <property name="service.pid" type="String" value="it.polito.elite.dog.communication.ws"/>
-   <reference bind="addedRuleEngineRESTApi" cardinality="0..1" interface="it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi" name="RuleEngineRESTApi" policy="dynamic" unbind="removedRuleEngineRESTApi"/>
+   <property name="service.pid" type="String" value="it.polito.elite.dog.communication.websocket.api"/>
 	   
 </scr:component>

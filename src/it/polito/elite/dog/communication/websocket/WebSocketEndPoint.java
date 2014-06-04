@@ -19,7 +19,7 @@ package it.polito.elite.dog.communication.websocket;
 
 import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
 import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
+//import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// reference for the EnvironmentRESTApi
 	private AtomicReference<EnvironmentRESTApi> environmentRestApi;
 	// reference for the RuleEngineRESTApi
-	private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
+	//private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	// reference for the WebSocketImplementation
 	private WebSocketImplementation webSocketImplementation;
 	// reference for the Http service
@@ -98,7 +98,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		// init data structures for referenced services
 		this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
 		this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
-		this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
+		//this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
+		this.http = new AtomicReference<HttpService>();
 		
 		// init the list of notifications per users
 		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String, ArrayList<String>>>();
@@ -204,10 +205,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the RuleEngineRESTApi service to add
 	 */
 	
-	public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
+	/*public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
 	{
 		// store a reference to the EnvironmentRESTApi service
-		this.ruleEngineRESTApi.set(ruleEngineRESTApi);
+		//this.ruleEngineRESTApi.set(ruleEngineRESTApi);
 	}
 	
 	/**
@@ -216,10 +217,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param ruleEngineRESTApi
 	 *            the RuleEngineRESTApi service to remove
 	 */
-	public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
+	/*public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
 	{
-		this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null);
-	}
+		//this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null);
+	}*/
 	
 	/**
 	 * Bind the Http Service
@@ -262,7 +263,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 		// create an instance of WebSocketImplementation
 		this.webSocketImplementation = new WebSocketImplementation(this.context, this, this.deviceRestApi,
-				this.environmentRestApi, this.ruleEngineRESTApi);
+				this.environmentRestApi/*, this.ruleEngineRESTApi*/);
 		
 		return this.webSocketImplementation;
 	}
