@@ -76,10 +76,10 @@ import javax.ws.rs.core.MediaType;
  * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
  * 
  */
-public class WebSocketConnectionHandler implements WebSocket.OnTextMessage
+public class WebSocketConnection implements WebSocket.OnTextMessage
 {
 	// instance of the connection used to obtain the user id
-	private WebSocketConnectionHandler connectionInstance;
+	private WebSocketConnection connectionInstance;
 	// number of initial parameters in the endPoint (ex uri or path) that
 	// indicates the class in which the requested action will be performed
 	// (devices, environment, rules, ...)
@@ -120,7 +120,7 @@ public class WebSocketConnectionHandler implements WebSocket.OnTextMessage
 	
 	
 	
-	public WebSocketConnectionHandler(BundleContext context, WebSocketEndPoint webSocketEndPoint/*,
+	public WebSocketConnection(BundleContext context, WebSocketEndPoint webSocketEndPoint/*,
 			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi,
 			AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi*/)
 	{
@@ -441,7 +441,7 @@ public class WebSocketConnectionHandler implements WebSocket.OnTextMessage
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebSocketConnectionHandler user : this.webSocketEndPoint.getUsers())
+				for (WebSocketConnection user : this.webSocketEndPoint.getUsers())
 				{
 					if (!notificationContent.isEmpty())
 					{

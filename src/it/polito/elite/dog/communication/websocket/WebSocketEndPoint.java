@@ -62,12 +62,12 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// reference for the RuleEngineRESTApi
 	// private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	// reference for the WebSocketImplementation
-	private WebSocketConnectionHandler webSocketImplementation;
+	private WebSocketConnection webSocketImplementation;
 	// reference for the Http service
 	private AtomicReference<HttpService> http;
 	
 	// list of connected users (by instances)
-	private List<WebSocketConnectionHandler> users;
+	private List<WebSocketConnection> users;
 	// private List<WebSocketPeer> users;
 	
 	// list of notifications per users
@@ -111,7 +111,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		
 		// init the list of users (by instances)
-		this.users = Collections.synchronizedList(new ArrayList<WebSocketConnectionHandler>());
+		this.users = Collections.synchronizedList(new ArrayList<WebSocketConnection>());
 		// this.users = Collections.synchronizedList(new
 		// ArrayList<WebSocketPeer>());
 		
@@ -268,7 +268,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.logger.log(LogService.LOG_DEBUG, "New connection from IP: " + req.getRemoteAddr());
 		
 		// create an instance of WebSocketImplementation
-		this.webSocketImplementation = new WebSocketConnectionHandler(this.context, this/*
+		this.webSocketImplementation = new WebSocketConnection(this.context, this/*
 																					 * ,
 																					 * this
 																					 * .
@@ -308,7 +308,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void addUser(WebSocketConnectionHandler instance)
+	public synchronized void addUser(WebSocketConnection instance)
 	{
 		this.users.add(instance);
 	}
@@ -320,7 +320,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void removeUser(WebSocketConnectionHandler instance)
+	public synchronized void removeUser(WebSocketConnection instance)
 	{
 		// we remove the user from the list of users
 		this.users.remove(instance);
@@ -335,10 +335,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	/**
 	 * Get the list of all users (obtaining their instance)
 	 * 
-	 * @return a {@link List} of {@link WebSocketConnectionHandler} objects with
+	 * @return a {@link List} of {@link WebSocketConnection} objects with
 	 *         all the users' instance
 	 */
-	public List<WebSocketConnectionHandler> getUsers()
+	public List<WebSocketConnection> getUsers()
 	{
 		return this.users;
 	}
