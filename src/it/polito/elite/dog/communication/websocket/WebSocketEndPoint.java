@@ -17,8 +17,8 @@
  */
 package it.polito.elite.dog.communication.websocket;
 
-import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
-import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+//import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
+//import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
 //import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
@@ -53,21 +53,22 @@ import org.osgi.service.log.LogService;
  * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
  * 
  */
-public class WebSocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService
+public class WebSocketEndPoint extends WebSocketServlet implements EventHandler, ManagedService, WebSocketConnector
 {
 	// reference for the DeviceRESTApi
-	private AtomicReference<DeviceRESTApi> deviceRestApi;
+	// private AtomicReference<DeviceRESTApi> deviceRestApi;
 	// reference for the EnvironmentRESTApi
-	private AtomicReference<EnvironmentRESTApi> environmentRestApi;
+	// private AtomicReference<EnvironmentRESTApi> environmentRestApi;
 	// reference for the RuleEngineRESTApi
-	//private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
+	// private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	// reference for the WebSocketImplementation
-	private WebSocketImplementation webSocketImplementation;
+	private WebSocketConnectionHandler webSocketImplementation;
 	// reference for the Http service
 	private AtomicReference<HttpService> http;
 	
 	// list of connected users (by instances)
-	private List<WebSocketImplementation> users;
+	private List<WebSocketConnectionHandler> users;
+	// private List<WebSocketPeer> users;
 	
 	// list of notifications per users
 	// the first key contains the clientId, the second contains the
@@ -93,19 +94,26 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	// serial id (the class is serializable)
 	private static final long serialVersionUID = 1L;
 	
+	// TODO extend to handle multiple endpoints
+	protected Class<?> registeredEndpoint;
+	protected Object restEndpoint;
+	protected String[] endpointPackages;
+	
 	public WebSocketEndPoint()
 	{
 		// init data structures for referenced services
-		this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
-		this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
-		//this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
+		// this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
+		// this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
+		// this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
 		this.http = new AtomicReference<HttpService>();
 		
 		// init the list of notifications per users
 		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		
 		// init the list of users (by instances)
-		this.users = Collections.synchronizedList(new ArrayList<WebSocketImplementation>());
+		this.users = Collections.synchronizedList(new ArrayList<WebSocketConnectionHandler>());
+		// this.users = Collections.synchronizedList(new
+		// ArrayList<WebSocketPeer>());
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
@@ -158,11 +166,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param deviceRestApi
 	 *            the DeviceRestApi service to add
 	 */
-	public void addedDeviceRESTApi(DeviceRESTApi deviceRestApi)
-	{
-		// store a reference to the DeviceRESTApi service
-		this.deviceRestApi.set(deviceRestApi);
-	}
+	/*
+	 * public void addedDeviceRESTApi(DeviceRESTApi deviceRestApi) { // store a
+	 * reference to the DeviceRESTApi service
+	 * //this.deviceRestApi.set(deviceRestApi); }
+	 */
 	
 	/**
 	 * Unbind the DeviceRESTApi service
@@ -170,10 +178,10 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param deviceRestApi
 	 *            the DeviceRESTApi service to remove
 	 */
-	public void removedDeviceRESTApi(DeviceRESTApi deviceRestApi)
-	{
-		this.deviceRestApi.compareAndSet(deviceRestApi, null);
-	}
+	/*
+	 * public void removedDeviceRESTApi(DeviceRESTApi deviceRestApi) {
+	 * //this.deviceRestApi.compareAndSet(deviceRestApi, null); }
+	 */
 	
 	/**
 	 * Bind the EnvironmentRESTApi service (before the bundle activation)
@@ -181,11 +189,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param environmentRestApi
 	 *            the EnvironmentRestApi service to add
 	 */
-	public void addedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
-	{
-		// store a reference to the EnvironmentRESTApi service
-		this.environmentRestApi.set(environmentRestApi);
-	}
+	/*
+	 * public void addedEnvironmentRESTApi(EnvironmentRESTApi
+	 * environmentRestApi) { // store a reference to the EnvironmentRESTApi
+	 * service //this.environmentRestApi.set(environmentRestApi); }
+	 */
 	
 	/**
 	 * Unbind the EnvironmentRESTApi service
@@ -193,10 +201,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param environmentRestApi
 	 *            the EnvironmentRESTApi service to remove
 	 */
-	public void removedEnvironmentRESTApi(EnvironmentRESTApi environmentRestApi)
-	{
-		this.environmentRestApi.compareAndSet(environmentRestApi, null);
-	}
+	/*
+	 * public void removedEnvironmentRESTApi(EnvironmentRESTApi
+	 * environmentRestApi) {
+	 * //this.environmentRestApi.compareAndSet(environmentRestApi, null); }
+	 */
 	
 	/**
 	 * Bind the RuleEngineRESTApi service (before the bundle activation)
@@ -205,22 +214,19 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 *            the RuleEngineRESTApi service to add
 	 */
 	
-	/*public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
-	{
-		// store a reference to the EnvironmentRESTApi service
-		//this.ruleEngineRESTApi.set(ruleEngineRESTApi);
-	}
-	
-	/**
-	 * Unbind the RuleEngineRESTApi service
+	/*
+	 * public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) {
+	 * // store a reference to the EnvironmentRESTApi service
+	 * //this.ruleEngineRESTApi.set(ruleEngineRESTApi); }
 	 * 
-	 * @param ruleEngineRESTApi
-	 *            the RuleEngineRESTApi service to remove
+	 * /** Unbind the RuleEngineRESTApi service
+	 * 
+	 * @param ruleEngineRESTApi the RuleEngineRESTApi service to remove
 	 */
-	/*public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
-	{
-		//this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null);
-	}*/
+	/*
+	 * public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
+	 * { //this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null); }
+	 */
 	
 	/**
 	 * Bind the Http Service
@@ -262,8 +268,20 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.logger.log(LogService.LOG_DEBUG, "New connection from IP: " + req.getRemoteAddr());
 		
 		// create an instance of WebSocketImplementation
-		this.webSocketImplementation = new WebSocketImplementation(this.context, this, this.deviceRestApi,
-				this.environmentRestApi/*, this.ruleEngineRESTApi*/);
+		this.webSocketImplementation = new WebSocketConnectionHandler(this.context, this/*
+																					 * ,
+																					 * this
+																					 * .
+																					 * deviceRestApi
+																					 * ,
+																					 * this
+																					 * .
+																					 * environmentRestApi
+																					 * ,
+																					 * this
+																					 * .
+																					 * ruleEngineRESTApi
+																					 */);
 		
 		return this.webSocketImplementation;
 	}
@@ -290,7 +308,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void addUser(WebSocketImplementation instance)
+	public synchronized void addUser(WebSocketConnectionHandler instance)
 	{
 		this.users.add(instance);
 	}
@@ -302,7 +320,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void removeUser(WebSocketImplementation instance)
+	public synchronized void removeUser(WebSocketConnectionHandler instance)
 	{
 		// we remove the user from the list of users
 		this.users.remove(instance);
@@ -311,15 +329,16 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		// that is after the @)
 		String stringifyInstance = instance.toString();
 		this.listOfNotificationsPerUser.remove(stringifyInstance.substring(stringifyInstance.indexOf("@") + 1));
+		
 	}
 	
 	/**
 	 * Get the list of all users (obtaining their instance)
 	 * 
-	 * @return a {@link List} of {@link WebSocketImplementation} objects with
+	 * @return a {@link List} of {@link WebSocketConnectionHandler} objects with
 	 *         all the users' instance
 	 */
-	public List<WebSocketImplementation> getUsers()
+	public List<WebSocketConnectionHandler> getUsers()
 	{
 		return this.users;
 	}
@@ -829,6 +848,15 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 			}
 		}
 		return newHashMap;
+	}
+	
+	@Override
+	public void registerEndpoint(Class<?> webSocketEndpoint, Object restEndpoint, String... packages)
+	{
+		this.registeredEndpoint = webSocketEndpoint;
+		this.restEndpoint = restEndpoint;
+		this.endpointPackages = packages;
+		
 	}
 	
 }

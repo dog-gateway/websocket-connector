@@ -17,8 +17,8 @@
  */
 package it.polito.elite.dog.communication.websocket;
 
-import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
-import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
+//import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
+//import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
 //import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonNotification;
@@ -29,6 +29,7 @@ import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -50,11 +51,14 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 import org.codehaus.jackson.node.ArrayNode;
 import org.eclipse.jetty.websocket.WebSocket;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.log.LogService;
 
 import javax.measure.Measure;
+import javax.naming.Context;
+import javax.naming.InitialContext;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -72,10 +76,10 @@ import javax.ws.rs.core.MediaType;
  * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
  * 
  */
-public class WebSocketImplementation implements WebSocket.OnTextMessage
+public class WebSocketConnectionHandler implements WebSocket.OnTextMessage
 {
 	// instance of the connection used to obtain the user id
-	private WebSocketImplementation connectionInstance;
+	private WebSocketConnectionHandler connectionInstance;
 	// number of initial parameters in the endPoint (ex uri or path) that
 	// indicates the class in which the requested action will be performed
 	// (devices, environment, rules, ...)
@@ -92,9 +96,9 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	private Connection connection;
 	
 	// reference for the DeviceRESTApi
-	private AtomicReference<DeviceRESTApi> deviceRESTApi;
+	//private AtomicReference<DeviceRESTApi> deviceRESTApi;
 	// reference for the EnvironmentRESTApi
-	private AtomicReference<EnvironmentRESTApi> environmentRESTApi;
+	//private AtomicReference<EnvironmentRESTApi> environmentRESTApi;
 	// reference for the RuleEngineRESTApi
 	//private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
 	
@@ -114,16 +118,18 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 	// registration
 	private String typeForRegistration;
 	
-	public WebSocketImplementation(BundleContext context, WebSocketEndPoint webSocketEndPoint,
-			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi/*,
+	
+	
+	public WebSocketConnectionHandler(BundleContext context, WebSocketEndPoint webSocketEndPoint/*,
+			AtomicReference<DeviceRESTApi> deviceRESTApi, AtomicReference<EnvironmentRESTApi> environmentRESTApi,
 			AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi*/)
 	{
 		// init the WebSocketEndPoint reference
 		this.webSocketEndPoint = webSocketEndPoint;
 		// init the Device Rest Api atomic reference
-		this.deviceRESTApi = deviceRESTApi;
+		//this.deviceRESTApi = deviceRESTApi;
 		// init the Environment Rest Api atomic reference
-		this.environmentRESTApi = environmentRESTApi;
+		//this.environmentRESTApi = environmentRESTApi;
 		// init the RuleEngine REST Api atomic reference
 		//this.ruleEngineRESTApi = ruleEngineRESTApi;
 		
@@ -189,6 +195,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		
 		// add the user to the list of users connected to the system
 		this.webSocketEndPoint.addUser(this);
+		//this.webSocketEndPoint.addUser(new WebSocketPeer(this.toString()));
 		this.logger.log(LogService.LOG_DEBUG, "Connection Protocol: " + connection.getProtocol());
 		if (this.connection.isOpen())
 		{
@@ -434,7 +441,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebSocketImplementation user : this.webSocketEndPoint.getUsers())
+				for (WebSocketConnectionHandler user : this.webSocketEndPoint.getUsers())
 				{
 					if (!notificationContent.isEmpty())
 					{
@@ -1062,15 +1069,16 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 						// device or the environment doesn't exist, it return a
 						// 404 NOT Found message as exception, so we have to
 						// intercept the exception
+						//TODO
 						if (clazz.toString().toLowerCase().indexOf("device") != -1)
 						{
-							result = (String) rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+							result = (String) rightMethod.invoke(webSocketEndPoint.restEndpoint/*this.deviceRESTApi.get()*/, rightArguments.toArray());
 						}
-						if (clazz.toString().toLowerCase().indexOf("environment") != -1)
+						/*if (clazz.toString().toLowerCase().indexOf("environment") != -1)
 						{
 							result = (String) rightMethod.invoke(this.environmentRESTApi.get(),
 									rightArguments.toArray());
-						}
+						}*/
 						/*if (clazz.toString().toLowerCase().indexOf("rule") != -1)
 						{
 							result = (String) rightMethod
@@ -1112,14 +1120,15 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 					{
 						try
 						{
+							// TODO
 							if (clazz.toString().toLowerCase().contains("device"))
 							{
-								rightMethod.invoke(this.deviceRESTApi.get(), rightArguments.toArray());
+								rightMethod.invoke(webSocketEndPoint.restEndpoint/*this.deviceRESTApi.get()*/, rightArguments.toArray());
 							}
-							if (clazz.toString().toLowerCase().contains("environment"))
+							/*if (clazz.toString().toLowerCase().contains("environment"))
 							{
 								rightMethod.invoke(this.environmentRESTApi.get(), rightArguments.toArray());
-							}
+							}*/
 							/*if (clazz.toString().toLowerCase().contains("rule"))
 							{
 								rightMethod.invoke(this.ruleEngineRESTApi.get(), rightArguments.toArray());
@@ -1219,6 +1228,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		return result;
 	}
 	
+	
 	/**
 	 * Get the class containing the annotation we are looking for (at this level
 	 * we look only for the first part of endPoint (api/v1/devices for
@@ -1242,7 +1252,9 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		// class
 		try
 		{
-			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi");
+			ClassLoader clsI = webSocketEndPoint.registeredEndpoint.getClassLoader();
+			Thread.currentThread().setContextClassLoader(clsI);
+			clazz = clsI.loadClass(webSocketEndPoint.endpointPackages[1]/*"it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi"*/);
 			if (this.checkClass(clazz, endPoint))
 			{
 				return clazz;
@@ -1252,6 +1264,10 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 		{
 			// it (DeviceRESTApi) is not the right class
 			this.logger.log(LogService.LOG_INFO, e.toString());
+		}
+		finally
+		{
+			Thread.currentThread().setContextClassLoader(cls);
 		}
 		
 		// if the method is not in the DeviceRESTApi class (so if it doesn't
@@ -1340,5 +1356,7 @@ public class WebSocketImplementation implements WebSocket.OnTextMessage
 			return false;
 		
 	}
+
+	
 	
 }
