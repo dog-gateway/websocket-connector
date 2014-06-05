@@ -29,11 +29,9 @@ import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,14 +49,11 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 import org.codehaus.jackson.node.ArrayNode;
 import org.eclipse.jetty.websocket.WebSocket;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.log.LogService;
 
 import javax.measure.Measure;
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -176,7 +171,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// if the connection is closed we remove the user from the list of users
 		// connected to the server and his notifications from the list of
 		// notifications
-		this.webSocketEndPoint.removeUser(this);
+		this.webSocketEndPoint.removeUser(this.toString());
 	}
 	
 	/**
@@ -194,7 +189,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		this.connection = connection;
 		
 		// add the user to the list of users connected to the system
-		this.webSocketEndPoint.addUser(this);
+		this.webSocketEndPoint.addUser(this.toString(), connection);
 		//this.webSocketEndPoint.addUser(new WebSocketPeer(this.toString()));
 		this.logger.log(LogService.LOG_DEBUG, "Connection Protocol: " + connection.getProtocol());
 		if (this.connection.isOpen())
@@ -216,7 +211,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				this.logger.log(LogService.LOG_INFO, e.toString());
 				// if something goes wrong we remove the user from the list of
 				// users connected to the server
-				this.webSocketEndPoint.removeUser(this);
+				this.webSocketEndPoint.removeUser(this.toString());
 			}
 		}
 	}
@@ -441,7 +436,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebSocketConnection user : this.webSocketEndPoint.getUsers())
+				for (WebSocketPeer user : this.webSocketEndPoint.getUsers().values())
 				{
 					if (!notificationContent.isEmpty())
 					{
@@ -453,8 +448,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
 							try
 							{
-								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user
-										.toString().substring(user.toString().indexOf("@") + 1)));
+								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user.getPeerId().substring(user.getPeerId().indexOf("@") + 1)));
 							}
 							catch (Exception e)
 							{
@@ -483,12 +477,12 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 									// transform the notification in Json
 									// format, with clientId, messageType, type
 									notificationResponse.setNotification(notificationContent);
-									notificationResponse.setClientId(user.toString().substring(
-											user.toString().indexOf("@") + 1));
+									notificationResponse.setClientId(user.getPeerId().substring(
+											user.getPeerId().indexOf("@") + 1));
 									notificationResponse.setMessageType("info");
 									notificationResponse.setType("notification");
 									String notificationToSend = this.mapper.writeValueAsString(notificationResponse);
-									user.connection.sendMessage(notificationToSend);
+									user.getConnection().sendMessage(notificationToSend);
 								}
 							}
 						}

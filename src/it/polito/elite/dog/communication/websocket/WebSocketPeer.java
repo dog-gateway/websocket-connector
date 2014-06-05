@@ -3,23 +3,28 @@ package it.polito.elite.dog.communication.websocket;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.eclipse.jetty.websocket.WebSocket.Connection;
+
 /**
  * Represent a client (peer) connected to Dog WebSocket
  * 
  * @author derussis
  *
  */
-public class WebSocketPeerTmp
+// TODO define equals and hashCode
+public class WebSocketPeer
 {
 	private String peerId;
 	private HashMap<String, ArrayList<String>> subscriptions;
-	
+	private Connection connection;
+
 	/**
 	 * @param peerId
 	 */
-	public WebSocketPeerTmp(String peerId)
+	public WebSocketPeer(String peerId, Connection connection)
 	{
 		this.peerId = peerId;
+		this.connection = connection;
 		this.subscriptions = new HashMap<String, ArrayList<String>>();
 	}
 	
@@ -28,9 +33,10 @@ public class WebSocketPeerTmp
 	 * @param peerId
 	 * @param subscriptions
 	 */
-	public WebSocketPeerTmp(String peerId, HashMap<String, ArrayList<String>> subscriptions)
+	public WebSocketPeer(String peerId, Connection connection, HashMap<String, ArrayList<String>> subscriptions)
 	{
 		this.peerId = peerId;
+		this.connection = connection;
 		this.subscriptions = subscriptions;
 	}
 
@@ -68,6 +74,23 @@ public class WebSocketPeerTmp
 	public void setSubscriptions(HashMap<String, ArrayList<String>> subscriptions)
 	{
 		this.subscriptions = subscriptions;
+	}
+	
+	/**
+	 * @return the connection
+	 */
+	public Connection getConnection()
+	{
+		return connection;
+	}
+
+
+	/**
+	 * @param connection the connection to set
+	 */
+	public void setConnection(Connection connection)
+	{
+		this.connection = connection;
 	}
 	
 }

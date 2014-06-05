@@ -24,10 +24,11 @@ import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.http.HttpServletRequest;
@@ -36,6 +37,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.SerializationConfig;
 import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 import org.eclipse.jetty.websocket.WebSocket;
+import org.eclipse.jetty.websocket.WebSocket.Connection;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -67,8 +69,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	private AtomicReference<HttpService> http;
 	
 	// list of connected users (by instances)
-	private List<WebSocketConnection> users;
-	// private List<WebSocketPeer> users;
+	//private List<WebSocketConnection> users;
+	private Map<String, WebSocketPeer> users;
 	
 	// list of notifications per users
 	// the first key contains the clientId, the second contains the
@@ -111,9 +113,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		this.listOfNotificationsPerUser = new HashMap<String, HashMap<String, ArrayList<String>>>();
 		
 		// init the list of users (by instances)
-		this.users = Collections.synchronizedList(new ArrayList<WebSocketConnection>());
-		// this.users = Collections.synchronizedList(new
-		// ArrayList<WebSocketPeer>());
+		//this.users = Collections.synchronizedList(new ArrayList<WebSocketConnection>());
+		this.users = new ConcurrentHashMap<String, WebSocketPeer>();
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
@@ -308,9 +309,9 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void addUser(WebSocketConnection instance)
+	public synchronized void addUser(String instance, Connection connection)
 	{
-		this.users.add(instance);
+		this.users.put(instance, new WebSocketPeer(instance, connection));
 	}
 	
 	/**
@@ -320,15 +321,15 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @param instance
 	 *            the instance of WebSocketImplementation dedicated to the user
 	 */
-	public synchronized void removeUser(WebSocketConnection instance)
+	public synchronized void removeUser(String instance)
 	{
 		// we remove the user from the list of users
 		this.users.remove(instance);
 		// remove all the notifications subscribed by the user (we take the
 		// userId from instance: we take the last part of the instance: the part
 		// that is after the @)
-		String stringifyInstance = instance.toString();
-		this.listOfNotificationsPerUser.remove(stringifyInstance.substring(stringifyInstance.indexOf("@") + 1));
+		//String stringifyInstance = instance.toString();
+		//this.listOfNotificationsPerUser.remove(stringifyInstance.substring(stringifyInstance.indexOf("@") + 1));
 		
 	}
 	
@@ -338,7 +339,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {@link List} of {@link WebSocketConnection} objects with
 	 *         all the users' instance
 	 */
-	public List<WebSocketConnection> getUsers()
+	public Map<String, WebSocketPeer> getUsers()
 	{
 		return this.users;
 	}
