@@ -12,7 +12,7 @@ import org.eclipse.jetty.websocket.WebSocket.Connection;
  *
  */
 // TODO define equals and hashCode
-public class WebSocketPeer
+public class ConnectedClientInfo
 {
 	private String peerId;
 	private HashMap<String, ArrayList<String>> subscriptions;
@@ -21,7 +21,7 @@ public class WebSocketPeer
 	/**
 	 * @param peerId
 	 */
-	public WebSocketPeer(String peerId, Connection connection)
+	public ConnectedClientInfo(String peerId, Connection connection)
 	{
 		this.peerId = peerId;
 		this.connection = connection;
@@ -33,7 +33,7 @@ public class WebSocketPeer
 	 * @param peerId
 	 * @param subscriptions
 	 */
-	public WebSocketPeer(String peerId, Connection connection, HashMap<String, ArrayList<String>> subscriptions)
+	public ConnectedClientInfo(String peerId, Connection connection, HashMap<String, ArrayList<String>> subscriptions)
 	{
 		this.peerId = peerId;
 		this.connection = connection;

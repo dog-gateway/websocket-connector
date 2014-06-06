@@ -449,7 +449,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				// the Event Handler is executed only once (on the last
 				// instance), so it is important to do the following things
 				// (check and send right notifications) for all the users
-				for (WebSocketPeer user : this.webSocketEndPoint.getUsers().values())
+				for (ConnectedClientInfo user : this.webSocketEndPoint.getUsers().values())
 				{
 					if (!notificationContent.isEmpty())
 					{

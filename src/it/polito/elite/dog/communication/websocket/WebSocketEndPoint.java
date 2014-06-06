@@ -70,7 +70,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	
 	// list of connected users (by instances)
 	//private List<WebSocketConnection> users;
-	private Map<String, WebSocketPeer> users;
+	private Map<String, ConnectedClientInfo> users;
 	
 	// list of notifications per users
 	// the first key contains the clientId, the second contains the
@@ -114,7 +114,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 		// init the list of users (by instances)
 		//this.users = Collections.synchronizedList(new ArrayList<WebSocketConnection>());
-		this.users = new ConcurrentHashMap<String, WebSocketPeer>();
+		this.users = new ConcurrentHashMap<String, ConnectedClientInfo>();
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
@@ -311,7 +311,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 */
 	public synchronized void addUser(String instance, Connection connection)
 	{
-		this.users.put(instance, new WebSocketPeer(instance, connection));
+		this.users.put(instance, new ConnectedClientInfo(instance, connection));
 	}
 	
 	/**
@@ -339,7 +339,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 * @return a {@link List} of {@link WebSocketConnection} objects with
 	 *         all the users' instance
 	 */
-	public Map<String, WebSocketPeer> getUsers()
+	public Map<String, ConnectedClientInfo> getUsers()
 	{
 		return this.users;
 	}
