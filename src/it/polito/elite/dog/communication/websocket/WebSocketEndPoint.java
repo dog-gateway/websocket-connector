@@ -70,7 +70,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	
 	// list of connected users (by instances)
 	//private List<WebSocketConnection> users;
-	private Map<String, ConnectedClientInfo> users;
+	private Map<String, ConnectedClientInfo> connectedClients;
 	
 	// list of notifications per users
 	// the first key contains the clientId, the second contains the
@@ -114,7 +114,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 		
 		// init the list of users (by instances)
 		//this.users = Collections.synchronizedList(new ArrayList<WebSocketConnection>());
-		this.users = new ConcurrentHashMap<String, ConnectedClientInfo>();
+		this.connectedClients = new ConcurrentHashMap<String, ConnectedClientInfo>();
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
@@ -311,7 +311,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 */
 	public synchronized void addUser(String instance, Connection connection)
 	{
-		this.users.put(instance, new ConnectedClientInfo(instance, connection));
+		this.connectedClients.put(instance, new ConnectedClientInfo(instance, connection));
 	}
 	
 	/**
@@ -324,7 +324,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	public synchronized void removeUser(String instance)
 	{
 		// we remove the user from the list of users
-		this.users.remove(instance);
+		this.connectedClients.remove(instance);
 		// remove all the notifications subscribed by the user (we take the
 		// userId from instance: we take the last part of the instance: the part
 		// that is after the @)
@@ -341,7 +341,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	 */
 	public Map<String, ConnectedClientInfo> getUsers()
 	{
-		return this.users;
+		return this.connectedClients;
 	}
 	
 	/**
@@ -776,7 +776,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements EventHandler,
 	public void handleEvent(Event event)
 	{
 		// method that handle the event generated for notification
-		if ((this.webSocketImplementation != null) && (this.users.size() != 0))
+		if ((this.webSocketImplementation != null) && (this.connectedClients.size() != 0))
 		{
 			this.webSocketImplementation.sendNotification(event);
 		}
