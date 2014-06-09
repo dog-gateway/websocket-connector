@@ -21,48 +21,34 @@ package it.polito.elite.dog.communication.websocket;
 //import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
 //import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
-import it.polito.elite.dog.communication.websocket.message.WebSocketJsonNotification;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonRequest;
 import it.polito.elite.dog.communication.websocket.message.WebSocketJsonResponse;
-import it.polito.elite.dog.core.library.model.notification.Notification;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
-import org.codehaus.jackson.node.ArrayNode;
-import org.eclipse.jetty.websocket.WebSocket;
-import org.osgi.framework.BundleContext;
-import org.osgi.service.event.Event;
-import org.osgi.service.log.LogService;
-
-import javax.measure.Measure;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
+
+import org.codehaus.jackson.JsonGenerationException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.SerializationConfig;
+import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
+import org.eclipse.jetty.websocket.WebSocket;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.log.LogService;
 
 /**
  * 
@@ -107,11 +93,11 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	private ObjectMapper mapper;
 	
 	// variable used to store the clientId for the notification registration
-	private String clientIdForRegistration;
+	// private String clientIdForRegistration;
 	
 	// variable used to store the type of received message for the notification
 	// registration
-	private String typeForRegistration;
+	// private String typeForRegistration;
 	
 	public WebSocketConnection(BundleContext context, WebSocketEndPoint webSocketEndPoint/*
 																						 * ,
@@ -142,14 +128,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// this.environmentRESTApi = environmentRESTApi;
 		// init the RuleEngine REST Api atomic reference
 		// this.ruleEngineRESTApi = ruleEngineRESTApi;
-		
-		// init the variable used to store the type of received message for the
-		// notification registration
-		this.typeForRegistration = "";
-		
-		// init the variable used to store the clientId for the notification
-		// registration
-		this.clientIdForRegistration = "";
 		
 		// init the number of initial parameters in the endPoint (ex uri or
 		// path) that indicates the class in which the requested action will be
@@ -253,54 +231,45 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				String clientId = webSocketReceivedData.getClientId();
 				String sequenceNumber = webSocketReceivedData.getSequenceNumber();
 				String messageType = webSocketReceivedData.getMessageType();
-				String type = webSocketReceivedData.getType();
+				//String type = webSocketReceivedData.getType();
 				String action = webSocketReceivedData.getAction();
 				String endPoint = webSocketReceivedData.getEndPoint();
 				String parameters = webSocketReceivedData.getParameters();
 				// check if the user is the right one and if the message is a
 				// request
-				if ((clientId != null)
-						&& clientId.equals(this.connectionInstance.toString())
+				if ((clientId != null) && clientId.equals(this.connectionInstance.toString())
 						&& (messageType.equals("request")))
 				{
-					// if it is a notification registration we have to call the
-					// method to register a notification (or a list of
-					// notifications)
-					// the parameters could be a list of string
-					// ["TemperatureMeasurementNotification",
-					// "AlertNotification", "BatteryLevelNotification"]
-					// or a simple string : "TemperatureMeasurementNotification"
-					// but here we set only the parameters needed in the invoked
-					// method
-					if (type != null && type.toLowerCase().contains("notification"))
-					{
-						// set the clientId for the registration
-						this.clientIdForRegistration = clientId;
-						// set the type for the registration
-						this.typeForRegistration = type;
-						// set to 0 the variable by which we usually count the
-						// initial parts of path that indicates the class
-						this.numberOfClassParameters = 0;
-					}
-					else
-					{
-						// reset the type for the registration (if it is not a
-						// notification request but the previous request was a
-						// notification one, it is necessary to reset the type
-						// value, otherwise the method will recognize it as a
-						// notification one)
-						this.typeForRegistration = type;
-						// set to 0 the variable by which we usually count the
-						// initial parts of path that indicates the class
-						this.numberOfClassParameters = 0;
-					}
+					
+					// set to 0 the variable by which we usually count the
+					// initial parts of path that indicates the class
+					this.numberOfClassParameters = 0;
+					
 					String result;
 					try
 					{
 						// obtain the requested information from the method
 						// that invoke the right method indicated by Path
 						// annotation
-						result = this.invokeMethodByAnnotation(endPoint, action, parameters);
+						// if it is a notification registration we have to call
+						// the
+						// method to register a notification (or a list of
+						// notifications)
+						// the parameters could be a list of string
+						// ["TemperatureMeasurementNotification",
+						// "AlertNotification", "BatteryLevelNotification"]
+						// or a simple string :
+						// "TemperatureMeasurementNotification"
+						// but here we set only the parameters needed in the
+						// invoked
+						// method
+						// TODO
+						if (endPoint != null && endPoint.toLowerCase().contains("notification"))
+						{
+							result = this.invokeMethodByAnnotation(endPoint, action, parameters, clientId);
+						}
+						else
+							result = this.invokeMethodByAnnotation(endPoint, action, parameters, null);
 						
 						// debug
 						this.logger.log(LogService.LOG_DEBUG, "Sending data: " + result);
@@ -373,432 +342,11 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		}
 	}
 	
-	/**
-	 * Send the notification in Json format
-	 * 
-	 * @param notificationEvent
-	 *            Event generated to handle the notification
-	 */
-	@SuppressWarnings("unchecked")
-	public void sendNotification(Event notificationEvent)
-	{
-		// we obtain the parts of the uri used by the notification as name
-		String[] topicParts = notificationEvent.getTopic().split("/");
-		String eventName = topicParts[topicParts.length - 1];
-		// create the variable that will contain all the fields contained in the
-		// notification (deviceUri, notificationTopic ...)
-		HashMap<String, String> notificationContent = new HashMap<String, String>();
-		// we obtain necessary information about the notifications
-		Object eventContent = notificationEvent.getProperty("event");
-		if (eventContent != null)
-		{
-			// we can received a single notification or more than one
-			// notification so we create a list in every case (containing one
-			// ore more notifications)
-			List<Notification> notificationList = new ArrayList<Notification>();
-			if (eventContent instanceof HashSet)
-				notificationList.addAll((Collection<? extends Notification>) eventContent);
-			else
-				notificationList.add((Notification) eventContent);
-			// we scroll through all items of the list of notifications received
-			// to store all the fields contained in it
-			for (Notification singleNotification : notificationList)
-			{
-				WebSocketJsonNotification notificationResponse = new WebSocketJsonNotification();
-				// cause the notification could contain a lot of fields (that we
-				// cannot know in advance) we have to scroll trough all of them
-				// stroring them in an hashmap (notificationContent)
-				for (Field notificationField : singleNotification.getClass().getDeclaredFields())
-				{
-					notificationField.setAccessible(true);
-					String notificationFieldName = notificationField.getName();
-					Object notificationFieldValue = null;
-					try
-					{
-						String notificationFieldValueFinal = "";
-						notificationFieldValue = notificationField.get(singleNotification);
-						// the content could be only a measure or a string,
-						// because if we want to send more notifications than
-						// only one, we have to send a packet with an array of
-						// single notification
-						if (notificationFieldValue instanceof Measure<?, ?>)
-							notificationFieldValueFinal = notificationFieldValue.toString();
-						else if (notificationFieldValue instanceof String)
-							notificationFieldValueFinal = (String) notificationFieldValue;
-						// we decided to use the notificationTopic to know the
-						// content of the notification, but the received
-						// notificationTopic contains more information than the
-						// ones we need (it/polito/elite/...) so we take only
-						// the last part
-						if (notificationFieldName.equals("notificationTopic"))
-						{
-							String[] fieldValueFinalParts = notificationFieldValueFinal.split("/");
-							notificationFieldValueFinal = fieldValueFinalParts[fieldValueFinalParts.length - 1];
-						}
-						// insert the information acquired in the list
-						notificationContent.put(notificationFieldName, notificationFieldValueFinal);
-					}
-					catch (Exception e)
-					{
-						// if something went wrong we want to continue for the
-						// other notificationField
-						this.logger.log(LogService.LOG_WARNING,
-								"Ops! Something goes wrong in parsing a notification... skip!", e);
-					}
-				}
-				// the Event Handler is executed only once (on the last
-				// instance), so it is important to do the following things
-				// (check and send right notifications) for all the users
-				for (ConnectedClientInfo user : this.webSocketEndPoint.getUsers().values())
-				{
-					if (!notificationContent.isEmpty())
-					{
-						try
-						{
-							// here we send the notification only to the users
-							// that have submitted to receive the kind of
-							// notification just received
-							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
-							try
-							{
-								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user.toString()));
-							}
-							catch (Exception e)
-							{
-								// if the list is null it has to continue
-								// without copying the list
-								this.logger.log(LogService.LOG_WARNING, "The list of notifications is empty");
-							}
-							// we send only the right notifications checking the
-							// list
-							if (listOfControllable != null && (!notificationContent.get("deviceUri").isEmpty()))
-							{
-								// first of all we check for the specific
-								// deviceUri, then, if there is not this
-								// specific deviceUri in the list we check for
-								// "all" entry
-								List<String> listOfNotification = listOfControllable.get((String) notificationContent
-										.get("deviceUri"));
-								if (listOfNotification == null)
-								{
-									listOfNotification = listOfControllable.get("all");
-								}
-								if (listOfNotification != null
-										&& (listOfNotification.contains(eventName.toString()) || listOfNotification
-												.contains("all")))
-								{
-									// transform the notification in Json
-									// format, with clientId, messageType, type
-									notificationResponse.setNotification(notificationContent);
-									notificationResponse.setClientId(user.toString());
-									notificationResponse.setMessageType("info");
-									notificationResponse.setType("notification");
-									String notificationToSend = this.mapper.writeValueAsString(notificationResponse);
-									user.getConnection().sendMessage(notificationToSend);
-								}
-							}
-						}
-						catch (IOException e)
-						{
-							// if something went wrong we want to continue for
-							// the other users
-							this.logger.log(LogService.LOG_WARNING, "Error handling notification content, skip!", e);
-						}
-					}
-				}
-			}
-		}
-	}
 	
-	/**
-	 * Unregister from a notification
-	 * 
-	 * @param clientId
-	 *            Id of the client that is requiring the unsubscription
-	 * 
-	 * @param controllable
-	 *            Controllable id (deviceUri) of the device for which we want to
-	 *            unsubscribe notifications
-	 * 
-	 * @param notificationsToRemove
-	 *            List of notifications from which the user want to be
-	 *            unsubscribed
-	 * 
-	 * @return a {String} result containing the result of the unregistration
-	 */
-	public String notificationUnregistration(String clientId, String controllable, Object notificationsToRemove)
-			throws JsonParseException, JsonMappingException
-	{
-		// store a backup copy of the list of notifications, so, in case of
-		// errors, we can restore it
-		HashMap<String, HashMap<String, ArrayList<String>>> listOfNotificationsPerUserBackup = new HashMap<String, HashMap<String, ArrayList<String>>>();
-		listOfNotificationsPerUserBackup = this.webSocketEndPoint.copyHashMapByValue(this.webSocketEndPoint
-				.getNotifications());
-		
-		Object notifications;
-		// chech if the notifications received are in json format or not
-		try
-		{
-			notifications = this.mapper.readTree((String) notificationsToRemove);
-		}
-		catch (Exception e)
-		{
-			notifications = notificationsToRemove;
-		}
-		// set default result
-		String result = "Unregistration failed";
-		// The notifications could be a simple string (only one notification) or
-		// a list of element
-		if (notifications instanceof String)
-		{
-			// if we receive only one single notification we can call directly
-			// the method that does the unregistration that will return true if
-			// the unsubscribtion was successfully completed
-			if (this.webSocketEndPoint.removeNotification(clientId, controllable, (String) notifications))
-				result = "Unregistration completed successfully";
-		}
-		else if (notifications instanceof ArrayNode)
-		{
-			// scroll through all the items received and for each of them we
-			// call the method that does the unregistration
-			ArrayNode notificationsArrayNode = (ArrayNode) notifications;
-			Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
-			result = "Unregistration completed successfully";
-			while (iterator.hasNext())
-			{
-				JsonNode current = iterator.next();
-				if (!this.webSocketEndPoint.removeNotification(clientId, controllable, (String) current.getTextValue()))
-				{
-					// if something goes wrong we reset the value copying the
-					// list backed up at the beginning of the unregistration
-					// process returning an error as result
-					this.webSocketEndPoint.setNotifications(this.webSocketEndPoint
-							.copyHashMapByValue(listOfNotificationsPerUserBackup));
-					result = "Unregistration failed";
-					break;
-				}
-			}
-		}
-		else
-		{
-			// if the notification list is empty the user wants to unsubscribe
-			// all the notifications
-			if (this.webSocketEndPoint.removeNotification(clientId, controllable, "all"))
-				result = "Unregistration completed successfully";
-		}
-		
-		try
-		{
-			// we try to set the result as json but if it generates any kind of
-			// exception we will set it directly as a string
-			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-			jsonResult.setResult(result);
-			return this.mapper.writeValueAsString(jsonResult);
-		}
-		catch (Exception e)
-		{
-			// if it is not possible to parse the result we send it as string
-			// (creating the Json code by hand)
-			this.logger.log(LogService.LOG_WARNING, "Impossible to parse the result we send as a string", e);
-			return "{\"result\":\"" + result + "\"}";
-		}
-	}
 	
-	/**
-	 * Register or unregister a notification for all the controllables
-	 * 
-	 * the clientId and the type of registration are taken from the instance
-	 * because we want to invoke this method directly with the path indicated by
-	 * the user
-	 * 
-	 * @param notifications
-	 *            List of notifications from which the user want to be
-	 *            unsubscribed
-	 * 
-	 * @return a {String} result containing the result of the registration
-	 * 
-	 */
-	@PUT
-	@Path("/api/v1/devices/notifications")
-	public String notificationRegistrationWithoutControllable(Object notifications) throws JsonParseException,
-			JsonMappingException
-	{
-		// depending on the type of registration indicated in the request we
-		// call one different method
-		if (this.typeForRegistration != null
-				&& this.typeForRegistration.toLowerCase().contains("notificationregistration"))
-		{
-			return this.notificationRegistration(this.clientIdForRegistration, "all", notifications);
-		}
-		if (this.typeForRegistration != null
-				&& this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
-		{
-			return this.notificationUnregistration(this.clientIdForRegistration, "all", notifications);
-		}
-		
-		// if something went wrong (so if we can't access to one of the method
-		// above, it means that one or more parameters was missed
-		try
-		{
-			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-			jsonResult
-					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
-			return this.mapper.writeValueAsString(jsonResult);
-		}
-		catch (Exception e)
-		{
-			this.logger
-					.log(LogService.LOG_ERROR,
-							"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
-			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
-		}
-	}
 	
-	/**
-	 * Register or unregister a notification for specific controllables
-	 * 
-	 * the clientId and the type of registration are taken from the instance
-	 * because we want to invoke this method directly with the path indicated by
-	 * the user
-	 * 
-	 * @param controllable
-	 *            Controllable to which we want to unsubscribe the notifications
-	 *            indicated
-	 * 
-	 * @param notifications
-	 *            List of notifications from which the user want to be
-	 *            unsubscribed
-	 * 
-	 * @return a {String} result containing the result of the registration
-	 * 
-	 */
-	@PUT
-	@Path("/api/v1/devices/{controllable}/notifications")
-	public String notificationRegistrationWithControllable(@PathParam("controllable") String controllable,
-			Object notifications) throws JsonParseException, JsonMappingException
-	{
-		// depending on the type of registration indicated in the request we
-		// call one different method
-		if (this.typeForRegistration != null
-				&& this.typeForRegistration.toLowerCase().contains("notificationregistration"))
-		{
-			return this.notificationRegistration(this.clientIdForRegistration, controllable, notifications);
-		}
-		if (this.typeForRegistration != null
-				&& this.typeForRegistration.toLowerCase().contains("notificationunregistration"))
-		{
-			return this.notificationUnregistration(this.clientIdForRegistration, controllable, notifications);
-		}
-		
-		// if something went wrong (so if we can't access to one of the method
-		// above, it means that one or more parameters was missed
-		try
-		{
-			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-			jsonResult
-					.setResult("The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
-			return this.mapper.writeValueAsString(jsonResult);
-		}
-		catch (Exception e)
-		{
-			this.logger
-					.log(LogService.LOG_ERROR,
-							"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)");
-			return "{\"result\":\"The command sent was not a valid command: you forgot (or wrote a wrong one) the type of message (notificationRegistration or notificationUnregistration)\"}";
-		}
-	}
 	
-	/**
-	 * Register a notification (main method)
-	 * 
-	 * @param clientId
-	 *            Id of the client that is requiring the subscription
-	 * @param controllable
-	 *            the id of the device for which we want to subscribe the
-	 *            notifications
-	 * @param notifications
-	 *            List of notifications from which the user want to be
-	 *            subscribed
-	 * 
-	 * @return a {String} result containing the result of the registration
-	 */
-	private String notificationRegistration(String clientId, String controllable, Object notificationsAcquired)
-			throws JsonParseException, JsonMappingException
-	{
-		// set the default result value
-		String result = "Registration failed";
-		Object notifications;
-		// check if the notifications are in json format or not
-		try
-		{
-			notifications = this.mapper.readTree((String) notificationsAcquired);
-		}
-		catch (Exception e)
-		{
-			notifications = notificationsAcquired;
-		}
-		try
-		{
-			// list of notification that has to be subscribed
-			ArrayList<String> notificationsList = new ArrayList<String>();
-			// we insert each notification only once, so if the user send the
-			// same notification name twice (or more) we insert only one
-			if (notifications instanceof String)
-			{
-				// if we receive only a single notification we can add it
-				// directly to the list of notifications
-				// but we do it only if the user has never subscribed the
-				// notification just received
-				if (!notificationsList.contains((String) notifications))
-					notificationsList.add((String) notifications);
-				
-			}
-			else if (notifications instanceof ArrayNode)
-			{
-				// scroll through all the items received and for each of them,
-				// if the user has never subscribed it, we add the specific
-				// notification to the list of notifications
-				ArrayNode notificationsArrayNode = (ArrayNode) notifications;
-				Iterator<JsonNode> iterator = notificationsArrayNode.getElements();
-				while (iterator.hasNext())
-				{
-					JsonNode current = iterator.next();
-					if (!notificationsList.contains((String) current.getTextValue()))
-						notificationsList.add(current.getTextValue());
-				}
-			}
-			// if the list is empty it means that the user wants to subscribe
-			// all the notifications
-			if (notificationsList.isEmpty())
-			{
-				notificationsList.add("all");
-			}
-			// at the end of the process that chooses which notifications have
-			// to be subscribed we can call the method that does the real
-			// subscription
-			if (this.webSocketEndPoint.putNotifications(clientId, controllable, notificationsList))
-				result = "Registration completed successfully";
-		}
-		catch (Exception e)
-		{
-			this.logger.log(LogService.LOG_ERROR, "Notification registration failed");
-			result = "Registration failed";
-		}
-		
-		// try to convert the result in json format
-		try
-		{
-			WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-			jsonResult.setResult(result);
-			return this.mapper.writeValueAsString(jsonResult);
-		}
-		catch (Exception e)
-		{
-			this.logger.log(LogService.LOG_ERROR, "Impossible to convert an object in JSON", e);
-			return "{\"result\":\"" + result + "\"}";
-		}
-		
-	}
+	
 	
 	/**
 	 * @throws InvocationTargetException
@@ -827,7 +375,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	 *         just invoked
 	 * 
 	 */
-	private String invokeMethodByAnnotation(String endPoint, String action, String parameters)
+	private String invokeMethodByAnnotation(String endPoint, String action, String parameters, String clientId)
 			throws ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
 			InstantiationException, IllegalAccessException, InvocationTargetException, JsonGenerationException,
 			JsonMappingException
@@ -848,15 +396,10 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// if the type of the message contains the word "notification" it means
 		// that the right class is this one, otherwise we call the method that
 		// identify the right class
-		if (this.typeForRegistration != null && this.typeForRegistration.toLowerCase().contains("notification"))
-		{
-			clazz = this.getClass();
-		}
-		else
-		{
-			ClassLoader cls = this.webSocketEndPoint.getClassloader();
-			clazz = this.getRightClass(endPoint, cls);
-		}
+		
+		ClassLoader cls = this.webSocketEndPoint.getClassloader();
+		clazz = this.getRightClass(endPoint, cls);
+		
 		String result = "";
 		
 		if (clazz != null)
@@ -1048,6 +591,11 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 			if ((parameters != null) && (!parameters.isEmpty()))
 			{
 				rightArguments.add(new String(parameters));
+			}
+			// TODO
+			if ((clientId != null) && (!clientId.isEmpty()))
+			{
+				rightArguments.add(new String(clientId));
 			}
 			if (rightMethod != null)
 			{

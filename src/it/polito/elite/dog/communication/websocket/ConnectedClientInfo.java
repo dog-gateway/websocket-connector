@@ -11,11 +11,9 @@ import org.eclipse.jetty.websocket.WebSocket.Connection;
  * @author derussis
  * 
  */
-// TODO define equals and hashCode
 public class ConnectedClientInfo
 {
 	private String clientId;
-	private HashMap<String, ArrayList<String>> subscriptions;
 	private Connection connection;
 	
 	/**
@@ -25,7 +23,6 @@ public class ConnectedClientInfo
 	{
 		this.clientId = clientId;
 		this.connection = connection;
-		this.subscriptions = new HashMap<String, ArrayList<String>>();
 	}
 	
 	/**
@@ -36,7 +33,6 @@ public class ConnectedClientInfo
 	{
 		this.clientId = peerId;
 		this.connection = connection;
-		this.subscriptions = subscriptions;
 	}
 	
 	/**
@@ -51,32 +47,15 @@ public class ConnectedClientInfo
 	 * @param clientId
 	 *            the peerId to set
 	 */
-	public void setClientId(String clientId)
+	protected void setClientId(String clientId)
 	{
 		this.clientId = clientId;
 	}
 	
 	/**
-	 * @return the subscriptions
-	 */
-	public HashMap<String, ArrayList<String>> getSubscriptions()
-	{
-		return subscriptions;
-	}
-	
-	/**
-	 * @param subscriptions
-	 *            the subscriptions to set
-	 */
-	public void setSubscriptions(HashMap<String, ArrayList<String>> subscriptions)
-	{
-		this.subscriptions = subscriptions;
-	}
-	
-	/**
 	 * @return the connection
 	 */
-	public Connection getConnection()
+	protected Connection getConnection()
 	{
 		return connection;
 	}
@@ -85,7 +64,7 @@ public class ConnectedClientInfo
 	 * @param connection
 	 *            the connection to set
 	 */
-	public void setConnection(Connection connection)
+	protected void setConnection(Connection connection)
 	{
 		this.connection = connection;
 	}

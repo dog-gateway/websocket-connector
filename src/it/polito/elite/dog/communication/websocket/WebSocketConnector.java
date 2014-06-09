@@ -1,5 +1,8 @@
 package it.polito.elite.dog.communication.websocket;
 
+import java.io.IOException;
+import java.util.Map;
+
 public interface WebSocketConnector
 {
 	/**
@@ -14,4 +17,10 @@ public interface WebSocketConnector
 	 *            register
 	 */
 	public void registerEndpoint(Class<?> webSocketEndpoint, Object restEndpoint, String... packages);
+	
+	public boolean isWebSocketAvailable();
+	
+	public Map<String, ConnectedClientInfo> getConnectedClients();
+	
+	public void sendMessage(String message, String recipient) throws IOException;
 }
