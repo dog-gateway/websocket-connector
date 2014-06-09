@@ -461,8 +461,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 							Map<String, ArrayList<String>> listOfControllable = new HashMap<String, ArrayList<String>>();
 							try
 							{
-								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user
-										.getPeerId().substring(user.getPeerId().indexOf("@") + 1)));
+								listOfControllable.putAll(this.webSocketEndPoint.getNotificationsPerUser(user.toString()));
 							}
 							catch (Exception e)
 							{
@@ -491,8 +490,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 									// transform the notification in Json
 									// format, with clientId, messageType, type
 									notificationResponse.setNotification(notificationContent);
-									notificationResponse.setClientId(user.getPeerId().substring(
-											user.getPeerId().indexOf("@") + 1));
+									notificationResponse.setClientId(user.toString());
 									notificationResponse.setMessageType("info");
 									notificationResponse.setType("notification");
 									String notificationToSend = this.mapper.writeValueAsString(notificationResponse);

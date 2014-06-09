@@ -9,25 +9,24 @@ import org.eclipse.jetty.websocket.WebSocket.Connection;
  * Represent a client (peer) connected to Dog WebSocket
  * 
  * @author derussis
- *
+ * 
  */
 // TODO define equals and hashCode
 public class ConnectedClientInfo
 {
-	private String peerId;
+	private String clientId;
 	private HashMap<String, ArrayList<String>> subscriptions;
 	private Connection connection;
-
+	
 	/**
-	 * @param peerId
+	 * @param clientId
 	 */
-	public ConnectedClientInfo(String peerId, Connection connection)
+	public ConnectedClientInfo(String clientId, Connection connection)
 	{
-		this.peerId = peerId;
+		this.clientId = clientId;
 		this.connection = connection;
 		this.subscriptions = new HashMap<String, ArrayList<String>>();
 	}
-	
 	
 	/**
 	 * @param peerId
@@ -35,30 +34,28 @@ public class ConnectedClientInfo
 	 */
 	public ConnectedClientInfo(String peerId, Connection connection, HashMap<String, ArrayList<String>> subscriptions)
 	{
-		this.peerId = peerId;
+		this.clientId = peerId;
 		this.connection = connection;
 		this.subscriptions = subscriptions;
 	}
-
-
+	
 	/**
-	 * @return the peerId
+	 * @return the clientId
 	 */
-	public String getPeerId()
+	public String getClientId()
 	{
-		return peerId;
+		return clientId;
 	}
-
-
+	
 	/**
-	 * @param peerId the peerId to set
+	 * @param clientId
+	 *            the peerId to set
 	 */
-	public void setPeerId(String peerId)
+	public void setClientId(String clientId)
 	{
-		this.peerId = peerId;
+		this.clientId = clientId;
 	}
-
-
+	
 	/**
 	 * @return the subscriptions
 	 */
@@ -66,10 +63,10 @@ public class ConnectedClientInfo
 	{
 		return subscriptions;
 	}
-
-
+	
 	/**
-	 * @param subscriptions the subscriptions to set
+	 * @param subscriptions
+	 *            the subscriptions to set
 	 */
 	public void setSubscriptions(HashMap<String, ArrayList<String>> subscriptions)
 	{
@@ -83,14 +80,28 @@ public class ConnectedClientInfo
 	{
 		return connection;
 	}
-
-
+	
 	/**
-	 * @param connection the connection to set
+	 * @param connection
+	 *            the connection to set
 	 */
 	public void setConnection(Connection connection)
 	{
 		this.connection = connection;
+	}
+	
+	/**
+	 * Give the {@link WebSocketConnection} client id by taking the instance string and
+	 * removing the class name
+	 */
+	@Override
+	public String toString()
+	{
+		StringBuilder result = new StringBuilder();
+		
+		result.append(this.clientId.substring(this.clientId.indexOf('@') + 1));
+		
+		return result.toString();
 	}
 	
 }
