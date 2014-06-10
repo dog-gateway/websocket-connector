@@ -1,8 +1,7 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,20 +17,33 @@
  */
 package it.polito.elite.dog.communication.websocket.message;
 
-public class WebSocketJsonInvocationResult
+/**
+ * 
+ * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
+public class InvocationResult
 {
 	// result of action performed by the server
 	private String result;
 	
-	// get "result"
+	/**
+	 * @return the result
+	 */
 	public String getResult()
 	{
 		return result;
 	}
 	
-	// setter for "result"
+	/**
+	 * @param result
+	 *            the result to set
+	 */
 	public void setResult(String result)
 	{
 		this.result = result;
 	}
+	
 }

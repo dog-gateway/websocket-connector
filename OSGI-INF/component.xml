@@ -4,7 +4,7 @@
    <reference bind="addedHttpService" cardinality="1..1" interface="org.osgi.service.http.HttpService" name="HttpService" policy="static" unbind="removedHttpService"/>
    <service>
       <provide interface="org.osgi.service.cm.ManagedService"/>
-      <provide interface="it.polito.elite.dog.communication.websocket.WebSocketConnector"/>
+      <provide interface="it.polito.elite.dog.communication.websocket.api.WebSocketConnector"/>
    </service>
    <property name="service.pid" type="String" value="it.polito.elite.dog.communication.websocket.api"/>
 	   

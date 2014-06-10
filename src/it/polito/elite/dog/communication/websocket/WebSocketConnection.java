@@ -1,5 +1,5 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
  * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
@@ -17,12 +17,12 @@
  */
 package it.polito.elite.dog.communication.websocket;
 
-//import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
-//import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-//import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
-import it.polito.elite.dog.communication.websocket.message.WebSocketJsonInvocationResult;
-import it.polito.elite.dog.communication.websocket.message.WebSocketJsonRequest;
-import it.polito.elite.dog.communication.websocket.message.WebSocketJsonResponse;
+import it.polito.elite.dog.communication.websocket.annotation.WebSocketPath;
+import it.polito.elite.dog.communication.websocket.info.WebSocketConnectorInfo;
+import it.polito.elite.dog.communication.websocket.message.Presentation;
+import it.polito.elite.dog.communication.websocket.message.InvocationResult;
+import it.polito.elite.dog.communication.websocket.message.Request;
+import it.polito.elite.dog.communication.websocket.message.Response;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
@@ -51,6 +51,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.service.log.LogService;
 
 /**
+ * Class that handles the effective communication via WebSocket.
  * 
  * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
@@ -59,13 +60,12 @@ import org.osgi.service.log.LogService;
  */
 public class WebSocketConnection implements WebSocket.OnTextMessage
 {
-	// instance of the connection used to obtain the user id
-	private WebSocketConnection connectionInstance;
-	// number of initial parameters in the endPoint (ex uri or path) that
+	// number of initial parameters (e.g., URI or path) in the endpoint that
 	// indicates the class in which the requested action will be performed
 	// (devices, environment, rules, ...)
 	private int numberOfClassParameters;
-	// initial parameters in the endPoint (ex uri or path) that indicate the
+	
+	// initial parameters (e.g., URI or path) in the endPoint that indicate the
 	// class in which the requested action will be performed (devices,
 	// environment, rules, ...)
 	private String[] endPointParts;
@@ -76,13 +76,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	// connection used to send and receive messages
 	private Connection connection;
 	
-	// reference for the DeviceRESTApi
-	// private AtomicReference<DeviceRESTApi> deviceRESTApi;
-	// reference for the EnvironmentRESTApi
-	// private AtomicReference<EnvironmentRESTApi> environmentRESTApi;
-	// reference for the RuleEngineRESTApi
-	// private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
-	
 	// the service logger
 	private LogHelper logger;
 	
@@ -92,34 +85,26 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	// the instance-level mapper
 	private ObjectMapper mapper;
 	
-	// variable used to store the clientId for the notification registration
-	// private String clientIdForRegistration;
-	
-	// variable used to store the type of received message for the notification
-	// registration
-	// private String typeForRegistration;
-	
+	/**
+	 * Constructor, called by the method {@link doWebSocketConnect} of
+	 * {@link WebSocketEndPoint} (it comes from {@link WebSocketServlet}).
+	 * 
+	 * @param context
+	 *            the OSGi context
+	 * @param webSocketEndPoint
+	 *            the caller
+	 */
 	public WebSocketConnection(BundleContext context, WebSocketEndPoint webSocketEndPoint)
 	{
-		// init the WebSocketEndPoint reference
 		this.webSocketEndPoint = webSocketEndPoint;
-		// init the Device Rest Api atomic reference
-		// this.deviceRESTApi = deviceRESTApi;
-		// init the Environment Rest Api atomic reference
-		// this.environmentRESTApi = environmentRESTApi;
-		// init the RuleEngine REST Api atomic reference
-		// this.ruleEngineRESTApi = ruleEngineRESTApi;
 		
-		// init the number of initial parameters in the endPoint (ex uri or
-		// path) that indicates the class in which the requested action will be
-		// performed (devices, environment, rules, ...)
+		// init the number of initial parameters to 0
 		this.numberOfClassParameters = 0;
 		
 		// store the bundle context
 		this.context = context;
-		// init the connection intance used to obtain the user id
-		this.connectionInstance = this;
-		// initialize the instance-wide object mapper
+		
+		// initialize the instance-wide object mapper for JSON
 		this.mapper = new ObjectMapper();
 		// set the mapper pretty printing
 		this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
@@ -127,32 +112,25 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
 		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
 		
-		// init the logger with a null logger
+		// init the logger
 		this.logger = new LogHelper(this.context);
 		
-		// log the activation
-		this.logger.log(LogService.LOG_INFO, "Activated....");
-		
+		// log the activation - debug
+		this.logger.log(LogService.LOG_DEBUG, "Activated....");
 	}
 	
 	/**
-	 * Method called when the user close the connection
-	 * 
-	 */
-	@Override
-	public void onClose(int statusCode, String reason)
-	{
-		// if the connection is closed we remove the user from the list of users
-		// connected to the server and his notifications from the list of
-		// notifications
-		this.webSocketEndPoint.removeUser(this.toString());
-	}
-	
-	/**
-	 * Method called when the user open the connection
+	 * Method called when a client opens the connection
 	 * 
 	 * @param connection
+	 *            the {@link Connection} instance
+	 */
+	/*
+	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * org.eclipse.jetty.websocket.WebSocket#onOpen(org.eclipse.jetty.websocket
+	 * .WebSocket.Connection)
 	 */
 	@Override
 	public void onOpen(Connection connection)
@@ -162,38 +140,69 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// init the connection
 		this.connection = connection;
 		
-		// add the user to the list of users connected to the system
+		// add the client to the list of users connected to the system
 		this.webSocketEndPoint.addUser(this.toString(), connection);
-		// this.webSocketEndPoint.addUser(new WebSocketPeer(this.toString()));
+		
+		// debug
 		this.logger.log(LogService.LOG_DEBUG, "Connection Protocol: " + connection.getProtocol());
+		
 		if (this.connection.isOpen())
 		{
 			try
 			{
-				// extract the userId from the instance name (by taking the last
-				// part of the connection instance (after the @))
-				String userId = this.connectionInstance.toString();
+				// prepare the presentation message
+				Presentation presentation = new Presentation();
+				// extract the clientId from the instance name by taking the
+				// last part of the connection instance (after the @), via the
+				// toString() method
+				presentation.setClientId(this.toString());
+				String presentationMessage = this.mapper.writeValueAsString(presentation);
 				// send the starting message (presentation) with the clientId
 				// generated
-				this.connection.sendMessage("{ \"clientId\": \"" + userId + "\",\"messageType\":\"presentation\" }");
+				this.connection.sendMessage(presentationMessage);
 			}
 			catch (IOException e)
 			{
 				// it was not possible to open the connection
-				this.logger.log(LogService.LOG_INFO, e.toString());
-				// if something goes wrong we remove the user from the list of
-				// users connected to the server
+				this.logger.log(LogService.LOG_ERROR,
+						"Impossible to open the connection with client " + this.toString(), e);
+				
+				// if something goes wrong, remove the client from the connected
+				// clients list
 				this.webSocketEndPoint.removeUser(this.toString());
 			}
 		}
 	}
 	
 	/**
-	 * Method called when the user send a message to the server
+	 * Method called when a client closes the connection.
+	 */
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.eclipse.jetty.websocket.WebSocket#onClose(int, java.lang.String)
+	 */
+	@Override
+	public void onClose(int statusCode, String reason)
+	{
+		// remove the client from the list of connected clients
+		this.webSocketEndPoint.removeUser(this.toString());
+		
+		// TODO remove the notification registration of the client
+	}
+	
+	/**
+	 * Method called when a client sends a message to the server.
 	 * 
 	 * @param data
 	 *            Received message
+	 */
+	/*
+	 * (non-Javadoc)
 	 * 
+	 * @see
+	 * org.eclipse.jetty.websocket.WebSocket.OnTextMessage#onMessage(java.lang
+	 * .String)
 	 */
 	@Override
 	public void onMessage(String data)
@@ -201,26 +210,27 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// if we actually receive data we process them
 		if (!data.isEmpty())
 		{
-			// variable used to parse all the Json data
-			WebSocketJsonRequest webSocketReceivedData;
+			// variable used to parse all the JSON data
+			Request webSocketReceivedData;
 			try
 			{
-				// parse Json code received
-				webSocketReceivedData = this.mapper.readValue(data, WebSocketJsonRequest.class);
-				this.logger.log(LogService.LOG_INFO, "Received data: " + webSocketReceivedData.toString());
+				// parse the received JSON
+				webSocketReceivedData = this.mapper.readValue(data, Request.class);
+				// debug
+				this.logger.log(LogService.LOG_DEBUG,
+						"Received data: " + this.mapper.writeValueAsString(webSocketReceivedData));
+				
 				String clientId = webSocketReceivedData.getClientId();
 				String sequenceNumber = webSocketReceivedData.getSequenceNumber();
 				String messageType = webSocketReceivedData.getMessageType();
-				// String type = webSocketReceivedData.getType();
 				String action = webSocketReceivedData.getAction();
 				String endPoint = webSocketReceivedData.getEndPoint();
 				String parameters = webSocketReceivedData.getParameters();
+				
 				// check if the user is the right one and if the message is a
 				// request
-				if ((clientId != null) && clientId.equals(this.connectionInstance.toString())
-						&& (messageType.equals("request")))
+				if ((clientId != null) && clientId.equals(this.toString()) && (messageType.equals("request")))
 				{
-					
 					// set to 0 the variable by which we usually count the
 					// initial parts of path that indicates the class
 					this.numberOfClassParameters = 0;
@@ -228,34 +238,15 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 					String result;
 					try
 					{
-						// obtain the requested information from the method
-						// that invoke the right method indicated by Path
-						// annotation
-						// if it is a notification registration we have to call
-						// the
-						// method to register a notification (or a list of
-						// notifications)
-						// the parameters could be a list of string
-						// ["TemperatureMeasurementNotification",
-						// "AlertNotification", "BatteryLevelNotification"]
-						// or a simple string :
-						// "TemperatureMeasurementNotification"
-						// but here we set only the parameters needed in the
-						// invoked
-						// method
-						// TODO
-						if (endPoint != null && endPoint.toLowerCase().contains("subscription"))
-						{
-							result = this.invokeMethodByAnnotation(endPoint, action, parameters, clientId);
-						}
-						else
-							result = this.invokeMethodByAnnotation(endPoint, action, parameters, null);
+						// invoke the "right" method given the endpoint, action,
+						// parameters and client ID
+						result = this.invokeMethodByAnnotation(endPoint, action, parameters, clientId);
 						
 						// debug
 						this.logger.log(LogService.LOG_DEBUG, "Sending data: " + result);
 						
-						// transform the result in a Json message
-						WebSocketJsonResponse jsonResponse = new WebSocketJsonResponse();
+						// transform the result in a JSON message
+						Response jsonResponse = new Response();
 						if (!clientId.isEmpty())
 							jsonResponse.setClientId(clientId);
 						if (!sequenceNumber.isEmpty())
@@ -265,54 +256,59 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 							jsonResponse.setAction(action);
 						if (!endPoint.isEmpty())
 							jsonResponse.setEndPoint(endPoint);
+						
 						// if we receive an empty result from the method it
 						// means that something went wrong
 						if (result.isEmpty())
 						{
-							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
+							InvocationResult jsonResult = new InvocationResult();
 							jsonResult.setResult("Something went wrong");
 							result = this.mapper.writeValueAsString(jsonResult);
 						}
+						
+						// if the result is not a JSON object, the readTree
+						// method will generate an exception that we intercept
+						// to insert the result as a string in the response
 						Object resultObject;
-						// if the result is not a Json object the readTree
-						// method generates an exception that we intercept to
-						// insert the result as string in the answer
 						try
 						{
 							resultObject = this.mapper.readTree(result);
 						}
 						catch (Exception e)
 						{
-							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
+							InvocationResult jsonResult = new InvocationResult();
 							jsonResult.setResult(result);
 							result = this.mapper.writeValueAsString(jsonResult);
 							resultObject = this.mapper.readTree(result);
 						}
+						// set the response, finally
 						jsonResponse.setResponse(resultObject);
 						
 						String response = this.mapper.writeValueAsString(jsonResponse);
 						// send the message just created
-						this.connectionInstance.connection.sendMessage(response);
+						this.connection.sendMessage(response);
 					}
 					catch (Exception e)
 					{
-						this.logger.log(LogService.LOG_WARNING, "Exception in invoking some REST API methods", e);
+						this.logger.log(LogService.LOG_ERROR, "Exception in invoking some REST/WebSocket API methods",
+								e);
 					}
 				}
 				else
 				{
 					// the request has not the right parameters (clientId and
 					// messageType)
-					// the error message is sent in json format
-					WebSocketJsonResponse jsonResponse = new WebSocketJsonResponse();
+					// the error message is sent in JSON format
+					Response jsonResponse = new Response();
 					if (!clientId.isEmpty())
 						jsonResponse.setClientId(clientId);
 					if (!sequenceNumber.isEmpty())
 						jsonResponse.setSequenceNumber(sequenceNumber);
-					jsonResponse.setMessageType("info");
+					jsonResponse.setMessageType("error");
 					jsonResponse.setResponse("You forgot to send the clientId or the message type is not a request");
 					String response = this.mapper.writeValueAsString(jsonResponse);
-					this.connectionInstance.connection.sendMessage(response);
+					// send the error message
+					this.connection.sendMessage(response);
 				}
 			}
 			catch (IOException ex)
@@ -323,58 +319,55 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * @throws InvocationTargetException
-	 * @throws IllegalAccessException
-	 * @throws InstantiationException
-	 * @throws IllegalArgumentException
-	 * @throws NoSuchMethodException
-	 * @throws SecurityException
-	 * 
-	 *             Invoke the right method from the right class (DeviceRESTApi
-	 *             or EnvironmentRESTApi)
+	 * Invoke the right method from the right class (DeviceRESTApi,
+	 * EnvironmentRESTApi, etc.)
 	 * 
 	 * @param endPoint
-	 *            Path specified as annotation on the method that has we want to
-	 *            invoke
-	 * 
+	 *            {@link Path} specified as annotation on the method that has we
+	 *            want to invoke
 	 * @param action
-	 *            Action (GET, POST, PUT, DELETE) that is specified as
+	 *            action (GET, POST, PUT, DELETE) that is specified as
 	 *            annotation on the method that we want to invoke
-	 * 
 	 * @param parameters
 	 *            parameters that has to be passed to the method that we want to
 	 *            invoke
+	 * @param clientId
+	 *            the client unique identifier
+	 * @return a {@link String} result containing the result generated by the
+	 *         method just invoked
 	 * 
-	 * @return a {String} result containing the result generated by the method
-	 *         just invoked
-	 * 
+	 * @throws ClassNotFoundException
+	 * @throws SecurityException
+	 * @throws NoSuchMethodException
+	 * @throws IllegalArgumentException
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws InvocationTargetException
+	 * @throws JsonGenerationException
+	 * @throws JsonMappingException
 	 */
 	private String invokeMethodByAnnotation(String endPoint, String action, String parameters, String clientId)
 			throws ClassNotFoundException, SecurityException, NoSuchMethodException, IllegalArgumentException,
 			InstantiationException, IllegalAccessException, InvocationTargetException, JsonGenerationException,
 			JsonMappingException
 	{
-		
 		// first of all we choose the class that contains the method we want to
 		// invoke
+		// init
 		Class<?> clazz = null;
+		String result = "";
 		
 		// then we divide the endPoint in different parts (in the
-		// path are separated by "/")
-		
+		// path they are separated by "/")
 		if (endPoint.startsWith("/"))
 		{
 			endPoint = endPoint.replaceFirst("/", "");
 		}
 		this.endPointParts = endPoint.split("/");
-		// if the type of the message contains the word "notification" it means
-		// that the right class is this one, otherwise we call the method that
-		// identify the right class
 		
-		ClassLoader cls = this.webSocketEndPoint.getClassloader();
+		// try to call the method that identify the right class
+		ClassLoader cls = this.webSocketEndPoint.getClass().getClassLoader();
 		clazz = this.getRightClass(endPoint, cls);
-		
-		String result = "";
 		
 		if (clazz != null)
 		{
@@ -390,11 +383,11 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 			{
 				// we start to check for the annotation from the point to which
 				// the getRightClass arrived, so we copy the number indicating
-				// the part of path already analized
-				// (for example after api/v1/devices/)
+				// the part of path already analized (for example after
+				// api/v1/devices/)
 				int numberOfAnalizedPartsOfEndPoint = this.numberOfClassParameters;
-				// we check if the analyzed method has the right action
-				// defined (GET, PUT, POST or DELETE)
+				// we check if the analyzed method defined the right action
+				// (GET, PUT, POST or DELETE)
 				if (method.isAnnotationPresent(GET.class) || method.isAnnotationPresent(PUT.class)
 						|| method.isAnnotationPresent(POST.class) || method.isAnnotationPresent(DELETE.class))
 				{
@@ -420,7 +413,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 						actionAnnotation = tempAnnotation.annotationType().getSimpleName();
 					}
 					// if the action is the right one we can check which is the
-					// right method (with the right annotation)
+					// right method (with the proper annotation)
 					if (actionAnnotation.isEmpty() || actionAnnotation.equals(action))
 					{
 						// here we acquire the annotation defined for the method
@@ -446,24 +439,23 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 								for (int k = 0; k < (this.endPointParts.length - this.numberOfClassParameters); k++)
 								{
 									// if there are both
-									// "/api/v1/devides/status"
-									// and "/api/v1/devices/{device-id}" we have
-									// to
+									// "/api/v1/devides/status" and
+									// "/api/v1/devices/{device-id}" we have to
 									// take care to choose the right one
 									if (methodAnnotationParts[k]
 											.compareTo(this.endPointParts[numberOfAnalizedPartsOfEndPoint]) != 0)
 									{
 										// if I have already chosen a method it
 										// means that a method without a
-										// parameter exists (because in the
-										// other case I say that it is the right
+										// parameter exists, because otherwise
+										// I'd say that it is the right
 										// method only at the end (when I've
-										// analyzed all the parameters))
+										// analyzed all the parameters)
 										if (rightMethod == null)
 										{
 											// if "{" or "}" is present it means
 											// that it is a parameter
-											// So we insert it in the list of
+											// so we insert it in the list of
 											// arguments (we need the parameters
 											// for the invoke method)
 											if ((methodAnnotationParts[k].indexOf("{") != -1)
@@ -484,28 +476,25 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 										else
 											// if a method was already chosen
 											// and we are here it would means
-											// that it
-											// is the wrong method or that we
-											// have
-											// already chosen the method without
-											// parameters
-											// (/api/v1/devices/status
-											// instead of
-											// /api/v1/devices/{devide-id})
+											// that it is the wrong method or
+											// that we have already chosen the
+											// method without parameters
+											// (/api/v1/devices/status instead
+											// of /api/v1/devices/{device-id})
 											break;
 									}
 									numberOfAnalizedPartsOfEndPoint++;
 								}
+								
 								if (numberOfAnalizedPartsOfEndPoint == (this.endPointParts.length))
 								{
 									// if we arrived at the end of Path and the
 									// dimension of endPoint is equal to the
-									// dimension of annotation it may be the
-									// right method
-									// but we have to check if the output of the
-									// method is the right one (Json) (if there
-									// is not a "Produces" annotation we assumes
-									// that it produces Json)
+									// dimension of annotation it should be the
+									// right method but we have to check if the
+									// output of the method is the right one: if
+									// there is not a "Produces" annotation we
+									// assume that it produces JSON
 									if (method.isAnnotationPresent(Produces.class))
 									{
 										Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
@@ -526,19 +515,18 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 						}
 						else
 						{
-							// if the endPoint has not other parts after the
-							// path used to select the class (/api/v1/devices or
-							// /api/v1/environment) it means that the method we
-							// are
-							// looking for has to answer to path /api/v1/devices
-							// or
+							// if the endPoint does not have other parts after
+							// the path used to select the class
+							// (/api/v1/devices or /api/v1/environment) it means
+							// that the method we are looking for has to answer
+							// to the "root" path /api/v1/devices or
 							// /api/v1/environment
 							if ((this.endPointParts.length - numberOfAnalizedPartsOfEndPoint) == 0)
 							{
 								// we have to check if the output of the method
-								// is the right one (Json) (if there is not a
+								// is the right one: if there is not a
 								// "Produces" annotation we assumes that it
-								// produces Json)
+								// produces JSON
 								if (method.isAnnotationPresent(Produces.class))
 								{
 									Produces tempAnnotation = (Produces) method.getAnnotation(Produces.class);
@@ -561,204 +549,117 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 			}
 			// if the method requires parameters we insert them in the list of
 			// rightArguments (that we will pass to the method)
-			// the parameters are specified as a Json string
+			// the parameters are specified as a JSON string
 			if ((parameters != null) && (!parameters.isEmpty()))
 			{
 				rightArguments.add(new String(parameters));
 			}
-			// TODO
-			if ((clientId != null) && (!clientId.isEmpty()))
-			{
-				rightArguments.add(new String(clientId));
-			}
+			// now we should have selected a method...
 			if (rightMethod != null)
 			{
-				// check how many parameters the method needs and if we need one
-				// more parameter (there are methods that ask for a parameter
-				// that could be empty) we will insert an empty one
+				// check how many parameters the method needs and if we need at
+				// least one more parameter we insert an empty one (there are
+				// methods that ask for a parameter
+				// that could be null)
 				Annotation[][] parameterAnnotations = rightMethod.getParameterAnnotations();
-				int numMethodParameters = 0;
-				numMethodParameters = parameterAnnotations.length;
-				if (numMethodParameters == rightArguments.size() + 1)
+				int numMethodParameters = parameterAnnotations.length;
+				if (numMethodParameters >= rightArguments.size() + 1)
 				{
 					rightArguments.add(null);
 				}
-				// if the method will return a String value we save the result
+				// if the method will return a String value we save the result,
 				// otherwise we have to intercept the WebApplicationException
 				// generated to give the result of the action
-				if (rightMethod.getGenericReturnType().equals(String.class))
+				try
 				{
-					// depending on the class selected we have to use the right
-					// reference (deviceRESTApi, environmentRESTApi,
-					// ruleEngineRESTApi, or this (WebSocketImplementation))
-					try
+					boolean invoked = false;
+					// depending on the class selected we have to use the
+					// right reference (deviceRESTApi, environmentRESTApi,
+					// etc.)
+					for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
+					{
+						if (!invoked)
+						{
+							if (clazz.isAssignableFrom(wci.getRegisteredBundle()))
+							{
+								// add the client ID for notifications
+								// registration
+								if ((clientId != null) && (!clientId.isEmpty()))
+								{
+									rightArguments.add(new String(clientId));
+								}
+								result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
+										rightArguments.toArray());
+								invoked = true;
+							}
+							else if (clazz.isAssignableFrom(wci.getRestEndpoint().getClass()))
+							{
+								result = (String) rightMethod.invoke(wci.getRestEndpoint(), rightArguments.toArray());
+								invoked = true;
+							}
+						}
+					}
+					
+				}
+				catch (Exception e)
+				{
+					// log
+					this.logger.log(LogService.LOG_ERROR, "Error in invoking the method " + rightMethod, e);
+					
+					String resultMessage = "";
+					
+					if (rightMethod.getGenericReturnType().equals(String.class))
 					{
 						// even if the method should return a String, if the
 						// device or the environment doesn't exist, it return a
-						// 404 NOT Found message as exception, so we have to
-						// intercept the exception
-						boolean invoked = false;
-						for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
-						{
-							if (!invoked)
-							{
-								// TODO
-								if (clazz.isAssignableFrom(wci.getRegisteredBundle()))
-								{
-									result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
-											rightArguments.toArray());
-									invoked = true;
-								}
-								else if(clazz.isAssignableFrom(wci.getRestEndpoint().getClass()))
-								{
-									result = (String) rightMethod.invoke(wci.getRestEndpoint(),
-											rightArguments.toArray());
-									invoked = true;
-								}
-							}
-						}
-						
+						// 404 Not Found message as an exception, so we have to
+						// handle the exception
+						resultMessage = "The requested resource was not found";
 					}
-					catch (Exception e)
+					else
 					{
-						// here we intercept the Exception generated to say
-						// that the requested resource was not found
-						String resultMessage = "The requested resource was not found";
-						
-						// we send the result as Json
-						WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-						jsonResult.setResult(resultMessage);
-						try
+						// here we intercept the Exception generated by methods
+						// that does not return a String, to know if the
+						// operation was executed correctly or not
+						if (e instanceof InvocationTargetException)
 						{
-							return this.mapper.writeValueAsString(jsonResult);
-						}
-						catch (IOException e1)
-						{
-							this.logger.log(LogService.LOG_INFO, e.toString());
-							return "{\"result\":\"" + jsonResult + "\"}";
-						}
-					}
-				}
-				else
-				{
-					// if the chosen method doesn't return a string it should
-					// generate an exception in which we can find the result of
-					// the operation
-					if (clazz.toString().toLowerCase().contains("device")
-							|| clazz.toString().toLowerCase().contains("environment")
-							|| clazz.toString().toLowerCase().contains("rule"))
-					{
-						try
-						{
-							boolean invoked = false;
-							for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
-							{
-								if (!invoked)
-								{
-									// TODO
-									if (clazz.isAssignableFrom(wci.getRegisteredBundle()))
-									{
-										result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
-												rightArguments.toArray());
-										invoked = true;
-										
-									}
-									else if(clazz.isAssignableFrom(wci.getRestEndpoint().getClass()))
-									{
-										result = (String) rightMethod.invoke(wci.getRestEndpoint(),
-												rightArguments.toArray());
-										invoked = true;
-									}
-										
-								}
-							}
+							// even if the InvocationTargetException is the
+							// only exception generated, the right one
+							// would be a WebApplicationException, so we
+							// manage that exception too
+							InvocationTargetException exception = (InvocationTargetException) e;
+							resultMessage = exception.getTargetException().getMessage();
 							
 						}
-						catch (Exception e)
+						else if (e instanceof WebApplicationException)
 						{
-							// here we intercept the Exception generated to say
-							// if the operation was executed correctly
-							String resultMessage = "";
-							if (e instanceof InvocationTargetException)
-							{
-								// even if the InvocationTargetException is the
-								// actually exception generated, the right one
-								// would be a WebApplicationException, so we
-								// manage that exception too
-								InvocationTargetException exception = (InvocationTargetException) e;
-								resultMessage = exception.getTargetException().getMessage();
-								if (resultMessage.toLowerCase().contains("ok")
-										|| resultMessage.toLowerCase().contains("created"))
-								{
-									resultMessage = "Command executed successfully";
-								}
-								else
-									resultMessage = "Command execution failed";
-							}
-							else if (e instanceof WebApplicationException)
-							{
-								// even if the InvocationTargetException is the
-								// actually exception generated, the right one
-								// would be a WebApplicationException, so we
-								// manage that exception too
-								WebApplicationException exception = (WebApplicationException) e;
-								resultMessage = exception.getResponse().toString();
-								if (resultMessage.toLowerCase().contains("ok")
-										|| resultMessage.toLowerCase().contains("created"))
-								{
-									resultMessage = "Command executed successfully";
-								}
-								else
-									resultMessage = "Command execution failed";
-							}
-							
-							// we send the result as Json
-							WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-							jsonResult.setResult(resultMessage);
-							try
-							{
-								return this.mapper.writeValueAsString(jsonResult);
-							}
-							catch (IOException e1)
-							{
-								this.logger.log(LogService.LOG_INFO, e.toString());
-								return "{\"result\":\"" + jsonResult + "\"}";
-							}
+							WebApplicationException exception = (WebApplicationException) e;
+							resultMessage = exception.getResponse().toString();
 						}
+						
+						if (resultMessage.toLowerCase().contains("ok")
+								|| resultMessage.toLowerCase().contains("created"))
+						{
+							resultMessage = "Method " + rightMethod + " executed successfully";
+						}
+						else
+							resultMessage = "Method " + rightMethod + " execution failed";
 					}
-					else if (clazz.equals(this.getClass()))
+					
+					// send the result as a JSON
+					InvocationResult jsonResult = new InvocationResult();
+					jsonResult.setResult(resultMessage);
+					try
 					{
-						// if the right class is this one
-						// (WebSocketImplementation) but the right method
-						// doesn't generate a String as result we set the result
-						// as "success" if the method doesn't generate
-						// exceptions
-						
-						// set the default result value
-						String resultMessage = "Command execution failed";
-						try
-						{
-							rightMethod.invoke(this, rightArguments.toArray());
-							resultMessage = "Command executed successfully";
-							
-						}
-						catch (Exception e)
-						{
-							resultMessage = "Command execution failed";
-						}
-						
-						// we send the result as Json
-						WebSocketJsonInvocationResult jsonResult = new WebSocketJsonInvocationResult();
-						jsonResult.setResult(resultMessage);
-						try
-						{
-							return this.mapper.writeValueAsString(jsonResult);
-						}
-						catch (IOException e1)
-						{
-							this.logger.log(LogService.LOG_INFO, e1.toString());
-							return "{\"result\":\"" + jsonResult + "\"}";
-						}
+						return this.mapper.writeValueAsString(jsonResult);
+					}
+					catch (IOException ex)
+					{
+						// log
+						this.logger.log(LogService.LOG_WARNING, "Exception in parsing the message: " + resultMessage,
+								ex);
+						// manually do the same work of Jackson...
+						return "{\"result\":\"" + resultMessage + "\"}";
 					}
 				}
 			}
@@ -768,19 +669,17 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * Get the class containing the annotation we are looking for (at this level
-	 * we look only for the first part of endPoint (api/v1/devices for
-	 * DeviceRESTApi and api/v1/devices for EnvironmentRESTApi)
+	 * Get the class containing the annotation we are looking for.<br/>
+	 * At this level we look for the first part of endpoint (e.g.,
+	 * api/v1/devices), only
 	 * 
 	 * @param endPoint
-	 *            Path for which we are looking for (that denote the method that
+	 *            path for which we are looking for (that denote the method that
 	 *            has to be invoke)
-	 * 
 	 * @param cls
-	 *            ClassLoader
-	 * 
-	 * @return a {Class<?>} object containing the right class response to the
-	 *         status API
+	 *            the bundle ClassLoader
+	 * @return a {@link Class<?>} object containing the right class response to
+	 *         the status API
 	 * 
 	 */
 	private Class<?> getRightClass(String endPoint, ClassLoader cls) throws ClassNotFoundException
@@ -789,10 +688,14 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		
 		try
 		{
+			// for each registered WebSocket endpoints...
 			for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
 			{
+				// set the classloader to the one of the selected endpoint...
 				ClassLoader clsI = wci.getRegisteredBundle().getClassLoader();
 				Thread.currentThread().setContextClassLoader(clsI);
+				// for each registered packages (from the other WebSocket
+				// bundles) try to load the desired class
 				for (String pack : wci.getEndpointPackages())
 				{
 					clazz = clsI.loadClass(pack);
@@ -805,11 +708,11 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		}
 		catch (Exception e)
 		{
-			// it (DeviceRESTApi) is not the right class
-			this.logger.log(LogService.LOG_INFO, e.toString());
+			this.logger.log(LogService.LOG_ERROR, "Impossible to find the required endpoint in the given classes", e);
 		}
 		finally
 		{
+			// restore the bundle classloader
 			Thread.currentThread().setContextClassLoader(cls);
 		}
 		
@@ -817,21 +720,18 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	}
 	
 	/**
-	 * Check if the class indicated contains the method annotated by endPoint
+	 * Check if the class indicated contains the method annotated by the desired
+	 * endpoint
 	 * 
 	 * @param clazz
-	 *            Class in which we have to look for the method searched
-	 * 
+	 *            Class in which we have to look for the desired method
 	 * @param endPoint
 	 *            Path for which we are looking for (that denote the method that
 	 *            has to be invoke)
-	 * 
-	 * @return a {boolean} object: a true value indicates that the clazz
-	 *         contains the method
+	 * @return true if the given class contains the method, false otherwise
 	 * 
 	 */
-	
-	boolean checkClass(Class<?> clazz, String endPoint) throws ClassNotFoundException
+	private boolean checkClass(Class<?> clazz, String endPoint) throws ClassNotFoundException
 	{
 		
 		boolean found = true;
@@ -839,10 +739,14 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// by "/") and we count the number of parameters obtained (so we know
 		// when we have to stop the comparison)
 		Annotation tempAnnotation = null;
+		// check for Path annotation (REST)
 		tempAnnotation = (Path) clazz.getAnnotation(Path.class);
+		
+		// otherwise, check for WebSocketPath annotation (defined here)
 		if (tempAnnotation == null)
 			tempAnnotation = (WebSocketPath) clazz.getAnnotation(WebSocketPath.class);
 		
+		// found?
 		if (tempAnnotation != null)
 		{
 			String classAnnotation = null;
@@ -867,7 +771,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				else
 				{
 					// it is used in the other method to start looking for the
-					// method from the right point of Endpoint
+					// method from the right point of endpoint
 					this.numberOfClassParameters++;
 				}
 			}
@@ -880,7 +784,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	
 	/**
 	 * Give the {@link WebSocketConnection} id by taking the instance string and
-	 * removing the class name
+	 * removing the class name.
 	 */
 	@Override
 	public String toString()

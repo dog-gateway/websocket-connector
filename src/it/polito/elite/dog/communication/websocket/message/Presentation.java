@@ -1,8 +1,7 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2014 Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,23 +17,39 @@
  */
 package it.polito.elite.dog.communication.websocket.message;
 
-import java.util.HashMap;
-
-public class WebSocketJsonNotification extends WebSocketJsonData
+/**
+ * 
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
+public class Presentation
 {
-	// content of the notification
-	private HashMap<String, String> notification;
+	private String clientId;
+	private String messageType = "presentation";
 	
-	// get notification
-	public HashMap<String, String> getNotification()
+	/**
+	 * @return the clientId
+	 */
+	public String getClientId()
 	{
-		return notification;
+		return clientId;
 	}
 	
-	// setter for notification
-	public void setNotification(HashMap<String, String> notification)
+	/**
+	 * @param clientId
+	 *            the clientId to set
+	 */
+	public void setClientId(String clientId)
 	{
-		this.notification = notification;
+		this.clientId = clientId;
 	}
 	
+	/**
+	 * @return the messageType
+	 */
+	public String getMessageType()
+	{
+		return messageType;
+	}
 }

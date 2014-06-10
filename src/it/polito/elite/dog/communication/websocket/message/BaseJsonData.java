@@ -1,8 +1,7 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,34 +17,52 @@
  */
 package it.polito.elite.dog.communication.websocket.message;
 
-public class WebSocketJsonData
+/**
+ * Define the base JSON structure for WebSocket communications.
+ * 
+ * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
+public class BaseJsonData
 {
-	// id of the client that ask to connect to the webSocket service (generated
+	// ID of the client that ask to connect to the webSocket service (generated
 	// by the server)
 	private String clientId;
 	// type of the message sent by the user (possible values: request, response,
-	// info)
+	// error, notification, presentation)
 	private String messageType;
 	
-	// get "clientId"
+	/**
+	 * @return the clientId
+	 */
 	public String getClientId()
 	{
 		return clientId;
 	}
 	
-	// setters for "clientId"
+	/**
+	 * @param clientId
+	 *            the clientId to set
+	 */
 	public void setClientId(String clientId)
 	{
 		this.clientId = clientId;
 	}
 	
-	// get "messageType"
+	/**
+	 * @return the messageType
+	 */
 	public String getMessageType()
 	{
 		return messageType;
 	}
 	
-	// setters for "messageType"
+	/**
+	 * @param messageType
+	 *            the messageType to set
+	 */
 	public void setMessageType(String messageType)
 	{
 		this.messageType = messageType;

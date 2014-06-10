@@ -1,5 +1,5 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
  * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
@@ -17,9 +17,9 @@
  */
 package it.polito.elite.dog.communication.websocket;
 
-//import it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi;
-//import it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi;
-//import it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi;
+import it.polito.elite.dog.communication.websocket.api.WebSocketConnector;
+import it.polito.elite.dog.communication.websocket.info.ConnectedClientInfo;
+import it.polito.elite.dog.communication.websocket.info.WebSocketConnectorInfo;
 import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
@@ -39,13 +39,14 @@ import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocket.Connection;
 import org.eclipse.jetty.websocket.WebSocketServlet;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.log.LogService;
 
 /**
+ * Main class for the WebSocket Connector. It provide the default implementation
+ * of the interface {@link WebSocketConnetor}.
  * 
  * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
  * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
@@ -54,35 +55,18 @@ import org.osgi.service.log.LogService;
  */
 public class WebSocketEndPoint extends WebSocketServlet implements ManagedService, WebSocketConnector
 {
-	// reference for the DeviceRESTApi
-	// private AtomicReference<DeviceRESTApi> deviceRestApi;
-	// reference for the EnvironmentRESTApi
-	// private AtomicReference<EnvironmentRESTApi> environmentRestApi;
-	// reference for the RuleEngineRESTApi
-	// private AtomicReference<RuleEngineRESTApi> ruleEngineRESTApi;
-	// reference for the WebSocketImplementation
-	private WebSocketConnection webSocketImplementation;
-	// reference for the Http service
+	// reference for the WebSocket connection
+	private WebSocketConnection webSocketConnection;
+	// reference for the Http Service
 	private AtomicReference<HttpService> http;
 	
-	// list of connected users (by instances)
-	// private List<WebSocketConnection> users;
+	// connected applications/clients
 	private Map<String, ConnectedClientInfo> connectedClients;
-	
-	// list of notifications per users
-	// the first key contains the clientId, the second contains the
-	// controllable name and the last Array contains the list of notifications
-	// subscribed for the specific user and the specific deviceUri
-	// private HashMap<String, HashMap<String, ArrayList<String>>>
-	// listOfNotificationsPerUser;
-	
-	// the service registration handle
-	private ServiceRegistration<?> serviceRegManagedService;
 	
 	// the bundle context reference
 	private BundleContext context;
 	
-	// the service logger
+	// the logger
 	private LogHelper logger;
 	
 	// the instance-level mapper
@@ -91,29 +75,20 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	// path at which the server will be accessible
 	private String webSocketPath;
 	
+	// list of bundles registered as internal endpoints
+	private Set<WebSocketConnectorInfo> registeredEndpoints;
+	
 	// serial id (the class is serializable)
 	private static final long serialVersionUID = 1L;
 	
-	private Set<WebSocketConnectorInfo> registeredEndpoints;
-
-
+	/**
+	 * Constructor
+	 */
 	public WebSocketEndPoint()
 	{
-		// init data structures for referenced services
-		// this.deviceRestApi = new AtomicReference<DeviceRESTApi>();
-		// this.environmentRestApi = new AtomicReference<EnvironmentRESTApi>();
-		// this.ruleEngineRESTApi = new AtomicReference<RuleEngineRESTApi>();
+		// init
 		this.http = new AtomicReference<HttpService>();
-		
-		// init the list of notifications per users
-		// this.listOfNotificationsPerUser = new HashMap<String, HashMap<String,
-		// ArrayList<String>>>();
-		
-		// init the list of users (by instances)
-		// this.users = Collections.synchronizedList(new
-		// ArrayList<WebSocketConnection>());
 		this.connectedClients = new ConcurrentHashMap<String, ConnectedClientInfo>();
-		
 		this.registeredEndpoints = new HashSet<WebSocketConnectorInfo>();
 		
 		// init default value for the path at which the server will be
@@ -153,81 +128,11 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	 */
 	public void deactivate()
 	{
-		// unregister the services
-		if (this.serviceRegManagedService != null)
-		{
-			this.serviceRegManagedService.unregister();
-		}
-		this.serviceRegManagedService = null;
+		// everything is null
+		this.context = null;
+		this.mapper = null;
+		this.logger = null;
 	}
-	
-	/**
-	 * Bind the DeviceRESTApi service (before the bundle activation)
-	 * 
-	 * @param deviceRestApi
-	 *            the DeviceRestApi service to add
-	 */
-	/*
-	 * public void addedDeviceRESTApi(DeviceRESTApi deviceRestApi) { // store a
-	 * reference to the DeviceRESTApi service
-	 * //this.deviceRestApi.set(deviceRestApi); }
-	 */
-	
-	/**
-	 * Unbind the DeviceRESTApi service
-	 * 
-	 * @param deviceRestApi
-	 *            the DeviceRESTApi service to remove
-	 */
-	/*
-	 * public void removedDeviceRESTApi(DeviceRESTApi deviceRestApi) {
-	 * //this.deviceRestApi.compareAndSet(deviceRestApi, null); }
-	 */
-	
-	/**
-	 * Bind the EnvironmentRESTApi service (before the bundle activation)
-	 * 
-	 * @param environmentRestApi
-	 *            the EnvironmentRestApi service to add
-	 */
-	/*
-	 * public void addedEnvironmentRESTApi(EnvironmentRESTApi
-	 * environmentRestApi) { // store a reference to the EnvironmentRESTApi
-	 * service //this.environmentRestApi.set(environmentRestApi); }
-	 */
-	
-	/**
-	 * Unbind the EnvironmentRESTApi service
-	 * 
-	 * @param environmentRestApi
-	 *            the EnvironmentRESTApi service to remove
-	 */
-	/*
-	 * public void removedEnvironmentRESTApi(EnvironmentRESTApi
-	 * environmentRestApi) {
-	 * //this.environmentRestApi.compareAndSet(environmentRestApi, null); }
-	 */
-	
-	/**
-	 * Bind the RuleEngineRESTApi service (before the bundle activation)
-	 * 
-	 * @param ruleEngineRESTApi
-	 *            the RuleEngineRESTApi service to add
-	 */
-	
-	/*
-	 * public void addedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi) {
-	 * // store a reference to the EnvironmentRESTApi service
-	 * //this.ruleEngineRESTApi.set(ruleEngineRESTApi); }
-	 * 
-	 * /** Unbind the RuleEngineRESTApi service
-	 * 
-	 * @param ruleEngineRESTApi the RuleEngineRESTApi service to remove
-	 */
-	/*
-	 * public void removedRuleEngineRESTApi(RuleEngineRESTApi ruleEngineRESTApi)
-	 * { //this.ruleEngineRESTApi.compareAndSet(ruleEngineRESTApi, null); }
-	 */
 	
 	/**
 	 * Bind the Http Service
@@ -256,6 +161,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	}
 	
 	/*
+	 * Method used every time a new client try to connect to the server
 	 * (non-Javadoc)
 	 * 
 	 * @see
@@ -265,87 +171,13 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	@Override
 	public WebSocket doWebSocketConnect(HttpServletRequest req, String arg1)
 	{
-		// Method used every time a user try to connect to the server
+		// debug
 		this.logger.log(LogService.LOG_DEBUG, "New connection from IP: " + req.getRemoteAddr());
 		
-		// create an instance of WebSocketImplementation
-		this.webSocketImplementation = new WebSocketConnection(this.context, this/*
-																				 * ,
-																				 * this
-																				 * .
-																				 * deviceRestApi
-																				 * ,
-																				 * this
-																				 * .
-																				 * environmentRestApi
-																				 * ,
-																				 * this
-																				 * .
-																				 * ruleEngineRESTApi
-																				 */);
+		// create a WebSocketConnection
+		this.webSocketConnection = new WebSocketConnection(this.context, this);
 		
-		return this.webSocketImplementation;
-	}
-	
-	/**
-	 * Register the Http Servlet after acquiring its value
-	 */
-	private void registerHttpServlet()
-	{
-		try
-		{
-			this.http.get().registerServlet(this.webSocketPath, this, null, null);
-		}
-		catch (Exception e)
-		{
-			// it was not possible to register the servlet
-			this.logger.log(LogService.LOG_ERROR, "Impossible to register the servlet", e);
-		}
-	}
-	
-	/**
-	 * Add a user (by its instance) to the list of users connected to the system
-	 * 
-	 * @param instance
-	 *            the instance of WebSocketImplementation dedicated to the user
-	 */
-	public synchronized void addUser(String instance, Connection connection)
-	{
-		this.connectedClients.put(instance, new ConnectedClientInfo(instance, connection));
-	}
-	
-	/**
-	 * Remove a user (by its instance) to the list of users connected to the
-	 * system and all its subscribed notifications
-	 * 
-	 * @param instance
-	 *            the instance of WebSocketImplementation dedicated to the user
-	 */
-	public synchronized void removeUser(String instance)
-	{
-		// we remove the user from the list of users
-		this.connectedClients.remove(instance);
-		// remove all the notifications subscribed by the user (we take the
-		// userId from instance: we take the last part of the instance: the part
-		// that is after the @)
-		// String stringifyInstance = instance.toString();
-		// this.listOfNotificationsPerUser.remove(stringifyInstance.substring(stringifyInstance.indexOf("@")
-		// + 1));
-		
-	}
-	
-	/**
-	 * Get the classLoader needed to invoke methods
-	 * 
-	 * It is necessary because the invocation is possible only from the main
-	 * class of the package
-	 * 
-	 * @return a {ClassLoader} object that allows to access all the other
-	 *         classes (with their methods)
-	 */
-	public ClassLoader getClassloader() throws ClassNotFoundException
-	{
-		return WebSocketEndPoint.class.getClassLoader();
+		return this.webSocketConnection;
 	}
 	
 	/*
@@ -372,40 +204,93 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 			}
 			catch (Exception e)
 			{
-				this.logger.log(LogService.LOG_WARNING, "Error in parsing the required WebSocket Path...", e);
+				this.logger.log(LogService.LOG_WARNING, "Error in parsing the required WebSocket path...", e);
 			}
 		}
 		// even if we cannot read the value from the file we instantiate the
 		// server because there is a default value
 		this.registerHttpServlet();
-		
 	}
 	
-	@Override
-	public void registerEndpoint(Class<?> webSocketEndpointClass, Object webSocketEndpoint, Object restEndpoint,
-			String... packages)
+	/**
+	 * Register the Http Servlet after acquiring its value, to provide WebSocket
+	 * functionalities.
+	 */
+	private void registerHttpServlet()
 	{
-		WebSocketConnectorInfo newRegistration = new WebSocketConnectorInfo(webSocketEndpointClass, restEndpoint,
+		try
+		{
+			// register a servlet for WebSocket
+			this.http.get().registerServlet(this.webSocketPath, this, null, null);
+		}
+		catch (Exception e)
+		{
+			// it was not possible to register the servlet
+			this.logger.log(LogService.LOG_ERROR, "Impossible to register the servlet", e);
+		}
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see it.polito.elite.dog.communication.websocket.api.WebSocketConnector#
+	 * registerEndpoint(java.lang.Object, java.lang.Object)
+	 */
+	@Override
+	public void registerEndpoint(Object webSocketEndpoint, Object restEndpoint)
+	{
+		WebSocketConnectorInfo newRegistration = new WebSocketConnectorInfo(webSocketEndpoint, restEndpoint);
+		this.registeredEndpoints.add(newRegistration);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see it.polito.elite.dog.communication.websocket.api.WebSocketConnector#
+	 * registerEndpoint(java.lang.Object, java.lang.Object, java.lang.String[])
+	 */
+	@Override
+	public void registerEndpoint(Object webSocketEndpoint, Object restEndpoint, String... packages)
+	{
+		WebSocketConnectorInfo newRegistration = new WebSocketConnectorInfo(webSocketEndpoint.getClass(), restEndpoint,
 				webSocketEndpoint, packages);
 		this.registeredEndpoints.add(newRegistration);
 		
 	}
 	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see it.polito.elite.dog.communication.websocket.api.WebSocketConnector#
+	 * getConnectedClients()
+	 */
 	@Override
-	public Map<String, ConnectedClientInfo> getConnectedClients()
+	public Set<String> getConnectedClients()
 	{
-		return this.connectedClients;
+		return this.connectedClients.keySet();
 	}
 	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see it.polito.elite.dog.communication.websocket.api.WebSocketConnector#
+	 * isWebSocketAvailable()
+	 */
 	@Override
 	public boolean isWebSocketAvailable()
 	{
-		if (this.webSocketImplementation != null)
+		if (this.webSocketConnection != null)
 			return true;
 		else
 			return false;
 	}
 	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see it.polito.elite.dog.communication.websocket.api.WebSocketConnector#
+	 * sendMessage(java.lang.String, java.lang.String)
+	 */
 	@Override
 	public void sendMessage(String message, String recipient) throws IOException
 	{
@@ -416,13 +301,38 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 		
 	}
 	
-	
 	/**
-	 * @return the registeredEndpoints
+	 * Getter for registeredEndpoints
+	 * 
+	 * @return the list of registeredEndpoints as {@link WebSocketConnectorInfo}
 	 */
 	public Set<WebSocketConnectorInfo> getRegisteredEndpoints()
 	{
-		return registeredEndpoints;
+		return this.registeredEndpoints;
+	}
+	
+	/**
+	 * Add a client to the list of users connected to the server
+	 * 
+	 * @param instance
+	 *            the client ID
+	 * @param connection
+	 *            the connection object associated to the given client
+	 */
+	public synchronized void addUser(String instance, Connection connection)
+	{
+		this.connectedClients.put(instance, new ConnectedClientInfo(instance, connection));
+	}
+	
+	/**
+	 * Remove a client from the list of users connected to the server
+	 * 
+	 * @param instance
+	 *            the client ID to remove
+	 */
+	public synchronized void removeUser(String instance)
+	{
+		this.connectedClients.remove(instance);
 	}
 	
 }

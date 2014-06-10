@@ -1,8 +1,7 @@
 /*
- * Dog - WebSocket Endpoint
+ * Dog - WebSocket Connector
  * 
- * Copyright (c) 2013-2014 Teodoro Montanaro
- * contact: teo.montanaro@gmail.com
+ * Copyright (c) 2013-2014 Teodoro Montanaro and Luigi De Russis
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +17,15 @@
  */
 package it.polito.elite.dog.communication.websocket.message;
 
-public class WebSocketJsonResponse extends WebSocketJsonData
+/**
+ * The JSON Response message
+ * 
+ * @author <a href="mailto:teo.montanaro@gmail.com">Teodoro Montanaro</a>
+ * @author <a href="mailto:luigi.derussis@polito.it">Luigi De Russis</a>
+ * @see <a href="http://elite.polito.it">http://elite.polito.it</a>
+ * 
+ */
+public class Response extends BaseJsonData
 {
 	
 	// sequence number used to indicate the request for which we are sending the
@@ -34,61 +41,86 @@ public class WebSocketJsonResponse extends WebSocketJsonData
 	// response obtained by methods
 	private Object response;
 	
-	// get sequenceNumber
+	/**
+	 * @return the sequenceNumber
+	 */
 	public String getSequenceNumber()
 	{
 		return sequenceNumber;
 	}
 	
-	// setter for sequenceNumber
+	/**
+	 * @param sequenceNumber
+	 *            the sequenceNumber to set
+	 */
 	public void setSequenceNumber(String sequenceNumber)
 	{
 		this.sequenceNumber = sequenceNumber;
 	}
 	
-	// get action
+	/**
+	 * @return the action
+	 */
 	public String getAction()
 	{
 		return action;
 	}
 	
-	// setter for action
+	/**
+	 * @param action
+	 *            the action to set
+	 */
 	public void setAction(String action)
 	{
 		this.action = action;
 	}
 	
-	// get endPoint
+	/**
+	 * @return the endPoint
+	 */
 	public String getEndPoint()
 	{
 		return endPoint;
 	}
 	
-	// setter for endPoint
+	/**
+	 * @param endPoint
+	 *            the endPoint to set
+	 */
 	public void setEndPoint(String endPoint)
 	{
 		this.endPoint = endPoint;
 	}
 	
-	// get parameters
+	/**
+	 * @return the parameters
+	 */
 	public String getParameters()
 	{
 		return parameters;
 	}
 	
-	// setter for parameters
+	/**
+	 * @param parameters
+	 *            the parameters to set
+	 */
 	public void setParameters(String parameters)
 	{
 		this.parameters = parameters;
 	}
 	
-	// get response
+	/**
+	 * @return the response
+	 */
 	public Object getResponse()
 	{
 		return response;
 	}
 	
-	// setter for response
+	/**
+	 * @param response
+	 *            the response to set
+	 */
 	public void setResponse(Object response)
 	{
 		this.response = response;
