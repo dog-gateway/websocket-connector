@@ -99,26 +99,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	// registration
 	// private String typeForRegistration;
 	
-	public WebSocketConnection(BundleContext context, WebSocketEndPoint webSocketEndPoint/*
-																						 * ,
-																						 * AtomicReference
-																						 * <
-																						 * DeviceRESTApi
-																						 * >
-																						 * deviceRESTApi
-																						 * ,
-																						 * AtomicReference
-																						 * <
-																						 * EnvironmentRESTApi
-																						 * >
-																						 * environmentRESTApi
-																						 * ,
-																						 * AtomicReference
-																						 * <
-																						 * RuleEngineRESTApi
-																						 * >
-																						 * ruleEngineRESTApi
-																						 */)
+	public WebSocketConnection(BundleContext context, WebSocketEndPoint webSocketEndPoint)
 	{
 		// init the WebSocketEndPoint reference
 		this.webSocketEndPoint = webSocketEndPoint;
@@ -194,8 +175,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				String userId = this.connectionInstance.toString();
 				// send the starting message (presentation) with the clientId
 				// generated
-				this.connection.sendMessage("{ \"clientId\": \"" + userId
-						+ "\",\"messageType\":\"info\",\"type\":\"presentation\" }");
+				this.connection.sendMessage("{ \"clientId\": \"" + userId + "\",\"messageType\":\"presentation\" }");
 			}
 			catch (IOException e)
 			{
@@ -231,7 +211,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				String clientId = webSocketReceivedData.getClientId();
 				String sequenceNumber = webSocketReceivedData.getSequenceNumber();
 				String messageType = webSocketReceivedData.getMessageType();
-				//String type = webSocketReceivedData.getType();
+				// String type = webSocketReceivedData.getType();
 				String action = webSocketReceivedData.getAction();
 				String endPoint = webSocketReceivedData.getEndPoint();
 				String parameters = webSocketReceivedData.getParameters();
@@ -264,7 +244,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 						// invoked
 						// method
 						// TODO
-						if (endPoint != null && endPoint.toLowerCase().contains("notification"))
+						if (endPoint != null && endPoint.toLowerCase().contains("subscription"))
 						{
 							result = this.invokeMethodByAnnotation(endPoint, action, parameters, clientId);
 						}
@@ -341,12 +321,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 			}
 		}
 	}
-	
-	
-	
-	
-	
-	
 	
 	/**
 	 * @throws InvocationTargetException
@@ -623,33 +597,27 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 						// device or the environment doesn't exist, it return a
 						// 404 NOT Found message as exception, so we have to
 						// intercept the exception
-						// TODO
-						if (clazz.toString().toLowerCase().indexOf("device") != -1)
+						boolean invoked = false;
+						for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
 						{
-							result = (String) rightMethod.invoke(webSocketEndPoint.restEndpoint/*
-																								 * this
-																								 * .
-																								 * deviceRESTApi
-																								 * .
-																								 * get
-																								 * (
-																								 * )
-																								 */,
-									rightArguments.toArray());
+							if (!invoked)
+							{
+								// TODO
+								if (clazz.isAssignableFrom(wci.getRegisteredBundle()))
+								{
+									result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
+											rightArguments.toArray());
+									invoked = true;
+								}
+								else if(clazz.isAssignableFrom(wci.getRestEndpoint().getClass()))
+								{
+									result = (String) rightMethod.invoke(wci.getRestEndpoint(),
+											rightArguments.toArray());
+									invoked = true;
+								}
+							}
 						}
-						/*
-						 * if
-						 * (clazz.toString().toLowerCase().indexOf("environment"
-						 * ) != -1) { result = (String)
-						 * rightMethod.invoke(this.environmentRESTApi.get(),
-						 * rightArguments.toArray()); }
-						 */
-						/*
-						 * if (clazz.toString().toLowerCase().indexOf("rule") !=
-						 * -1) { result = (String) rightMethod
-						 * .invoke(this.ruleEngineRESTApi.get(),
-						 * rightArguments.toArray()); }
-						 */
+						
 					}
 					catch (Exception e)
 					{
@@ -670,10 +638,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 							return "{\"result\":\"" + jsonResult + "\"}";
 						}
 					}
-					if (clazz.equals(this.getClass()))
-					{
-						result = (String) rightMethod.invoke(this, rightArguments.toArray());
-					}
 				}
 				else
 				{
@@ -686,32 +650,28 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 					{
 						try
 						{
-							// TODO
-							if (clazz.toString().toLowerCase().contains("device"))
+							boolean invoked = false;
+							for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
 							{
-								rightMethod.invoke(webSocketEndPoint.restEndpoint/*
-																				 * this
-																				 * .
-																				 * deviceRESTApi
-																				 * .
-																				 * get
-																				 * (
-																				 * )
-																				 */, rightArguments.toArray());
+								if (!invoked)
+								{
+									// TODO
+									if (clazz.isAssignableFrom(wci.getRegisteredBundle()))
+									{
+										result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
+												rightArguments.toArray());
+										invoked = true;
+										
+									}
+									else if(clazz.isAssignableFrom(wci.getRestEndpoint().getClass()))
+									{
+										result = (String) rightMethod.invoke(wci.getRestEndpoint(),
+												rightArguments.toArray());
+										invoked = true;
+									}
+										
+								}
 							}
-							/*
-							 * if (clazz.toString().toLowerCase().contains(
-							 * "environment")) {
-							 * rightMethod.invoke(this.environmentRESTApi.get(),
-							 * rightArguments.toArray()); }
-							 */
-							/*
-							 * if
-							 * (clazz.toString().toLowerCase().contains("rule"))
-							 * {
-							 * rightMethod.invoke(this.ruleEngineRESTApi.get(),
-							 * rightArguments.toArray()); }
-							 */
 							
 						}
 						catch (Exception e)
@@ -826,17 +786,21 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 	private Class<?> getRightClass(String endPoint, ClassLoader cls) throws ClassNotFoundException
 	{
 		Class<?> clazz = null;
-		// first of all we check if the method searched is in the DeviceRESTApi
-		// class
+		
 		try
 		{
-			ClassLoader clsI = webSocketEndPoint.registeredEndpoint.getClassLoader();
-			Thread.currentThread().setContextClassLoader(clsI);
-			clazz = clsI
-					.loadClass(webSocketEndPoint.endpointPackages[1]/* "it.polito.elite.dog.communication.rest.device.api.DeviceRESTApi" */);
-			if (this.checkClass(clazz, endPoint))
+			for (WebSocketConnectorInfo wci : this.webSocketEndPoint.getRegisteredEndpoints())
 			{
-				return clazz;
+				ClassLoader clsI = wci.getRegisteredBundle().getClassLoader();
+				Thread.currentThread().setContextClassLoader(clsI);
+				for (String pack : wci.getEndpointPackages())
+				{
+					clazz = clsI.loadClass(pack);
+					if (this.checkClass(clazz, endPoint))
+					{
+						return clazz;
+					}
+				}
 			}
 		}
 		catch (Exception e)
@@ -847,37 +811,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		finally
 		{
 			Thread.currentThread().setContextClassLoader(cls);
-		}
-		
-		// if the method is not in the DeviceRESTApi class (so if it doesn't
-		// return), we look for it
-		// in the EnvironmentRESTApi class
-		try
-		{
-			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.environment.api.EnvironmentRESTApi");
-			if (this.checkClass(clazz, endPoint))
-			{
-				return clazz;
-			}
-		}
-		catch (Exception e)
-		{
-			// it (EnvironmentRESTApi) is not the right class
-			this.logger.log(LogService.LOG_INFO, e.toString());
-		}
-		
-		try
-		{
-			clazz = cls.loadClass("it.polito.elite.dog.communication.rest.ruleengine.api.RuleEngineRESTApi");
-			if (this.checkClass(clazz, endPoint))
-			{
-				return clazz;
-			}
-		}
-		catch (Exception e)
-		{
-			// it (RuleEngineRESTApi) is not the right class
-			this.logger.log(LogService.LOG_INFO, e.toString());
 		}
 		
 		return null;
@@ -905,10 +838,19 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// we divide the class annotation in different parts (that are separated
 		// by "/") and we count the number of parameters obtained (so we know
 		// when we have to stop the comparison)
-		Path tempAnnotation = (Path) clazz.getAnnotation(Path.class);
+		Annotation tempAnnotation = null;
+		tempAnnotation = (Path) clazz.getAnnotation(Path.class);
+		if (tempAnnotation == null)
+			tempAnnotation = (WebSocketPath) clazz.getAnnotation(WebSocketPath.class);
+		
 		if (tempAnnotation != null)
 		{
-			String classAnnotation = tempAnnotation.value().toString();
+			String classAnnotation = null;
+			if (tempAnnotation instanceof Path)
+				classAnnotation = ((Path) tempAnnotation).value().toString();
+			else if (tempAnnotation instanceof WebSocketPath)
+				classAnnotation = ((WebSocketPath) tempAnnotation).value().toString();
+			
 			if (classAnnotation.startsWith("/"))
 			{
 				classAnnotation = classAnnotation.replaceFirst("/", "");

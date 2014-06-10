@@ -26,9 +26,6 @@ public class WebSocketJsonData
 	// type of the message sent by the user (possible values: request, response,
 	// info)
 	private String messageType;
-	// type of the request/response/info (possible values: notification,
-	// notificationRegistration, notificationUnregistration, presentation)
-	private String type;
 	
 	// get "clientId"
 	public String getClientId()
@@ -52,18 +49,6 @@ public class WebSocketJsonData
 	public void setMessageType(String messageType)
 	{
 		this.messageType = messageType;
-	}
-	
-	// get "Type"
-	public String getType()
-	{
-		return type;
-	}
-	
-	// setters for "Type"
-	public void setType(String type)
-	{
-		this.type = type;
 	}
 	
 }

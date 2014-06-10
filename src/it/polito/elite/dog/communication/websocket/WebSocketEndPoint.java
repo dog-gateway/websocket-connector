@@ -24,7 +24,9 @@ import it.polito.elite.dog.core.library.util.LogHelper;
 
 import java.io.IOException;
 import java.util.Dictionary;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -92,11 +94,9 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	// serial id (the class is serializable)
 	private static final long serialVersionUID = 1L;
 	
-	// TODO extend to handle multiple endpoints
-	protected Class<?> registeredEndpoint;
-	protected Object restEndpoint;
-	protected String[] endpointPackages;
-	
+	private Set<WebSocketConnectorInfo> registeredEndpoints;
+
+
 	public WebSocketEndPoint()
 	{
 		// init data structures for referenced services
@@ -113,6 +113,8 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 		// this.users = Collections.synchronizedList(new
 		// ArrayList<WebSocketConnection>());
 		this.connectedClients = new ConcurrentHashMap<String, ConnectedClientInfo>();
+		
+		this.registeredEndpoints = new HashSet<WebSocketConnectorInfo>();
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
@@ -331,7 +333,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 		// + 1));
 		
 	}
-
+	
 	/**
 	 * Get the classLoader needed to invoke methods
 	 * 
@@ -380,11 +382,12 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 	}
 	
 	@Override
-	public void registerEndpoint(Class<?> webSocketEndpoint, Object restEndpoint, String... packages)
+	public void registerEndpoint(Class<?> webSocketEndpointClass, Object webSocketEndpoint, Object restEndpoint,
+			String... packages)
 	{
-		this.registeredEndpoint = webSocketEndpoint;
-		this.restEndpoint = restEndpoint;
-		this.endpointPackages = packages;
+		WebSocketConnectorInfo newRegistration = new WebSocketConnectorInfo(webSocketEndpointClass, restEndpoint,
+				webSocketEndpoint, packages);
+		this.registeredEndpoints.add(newRegistration);
 		
 	}
 	
@@ -402,15 +405,24 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 		else
 			return false;
 	}
-
+	
 	@Override
 	public void sendMessage(String message, String recipient) throws IOException
 	{
-		if(message!=null && !message.isEmpty() && this.connectedClients.containsKey(recipient))
+		if (message != null && !message.isEmpty() && this.connectedClients.containsKey(recipient))
 		{
 			this.connectedClients.get(recipient).getConnection().sendMessage(message);
 		}
 		
+	}
+	
+	
+	/**
+	 * @return the registeredEndpoints
+	 */
+	public Set<WebSocketConnectorInfo> getRegisteredEndpoints()
+	{
+		return registeredEndpoints;
 	}
 	
 }

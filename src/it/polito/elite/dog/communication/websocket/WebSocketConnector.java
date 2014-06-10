@@ -16,7 +16,7 @@ public interface WebSocketConnector
 	 *            zero or more Java packages associated to the endpoint to
 	 *            register
 	 */
-	public void registerEndpoint(Class<?> webSocketEndpoint, Object restEndpoint, String... packages);
+	public void registerEndpoint(Class<?> webSocketEndpointClass, Object webSocketEndpoint, Object restEndpoint, String... packages);
 	
 	public boolean isWebSocketAvailable();
 	
