@@ -93,7 +93,7 @@ public class WebSocketEndPoint extends WebSocketServlet implements ManagedServic
 		
 		// init default value for the path at which the server will be
 		// accessible (it is the part that follow server-name.ext:port-number)
-		this.webSocketPath = "/dogws";
+		this.webSocketPath = "/ws";
 	}
 	
 	/**
