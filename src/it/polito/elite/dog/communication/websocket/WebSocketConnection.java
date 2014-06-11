@@ -603,9 +603,6 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 				}
 				catch (Exception e)
 				{
-					// log
-					this.logger.log(LogService.LOG_ERROR, "Error in invoking the method " + rightMethod, e);
-					
 					String resultMessage = "";
 					
 					if (rightMethod.getGenericReturnType().equals(String.class))
