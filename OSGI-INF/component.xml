@@ -6,6 +6,6 @@
       <provide interface="org.osgi.service.cm.ManagedService"/>
       <provide interface="it.polito.elite.dog.communication.websocket.api.WebSocketConnector"/>
    </service>
-   <property name="service.pid" type="String" value="it.polito.elite.dog.communication.websocket.api"/>
+   <property name="service.pid" type="String" value="it.polito.elite.dog.communication.websocket.connector"/>
 	   
 </scr:component>
