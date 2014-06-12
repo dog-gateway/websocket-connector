@@ -304,7 +304,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 						jsonResponse.setClientId(clientId);
 					if (!sequenceNumber.isEmpty())
 						jsonResponse.setSequenceNumber(sequenceNumber);
-					jsonResponse.setMessageType("error");
+					jsonResponse.setMessageType("response");
 					jsonResponse.setResponse("You forgot to send the clientId or the message type is not a request");
 					String response = this.mapper.writeValueAsString(jsonResponse);
 					// send the error message
