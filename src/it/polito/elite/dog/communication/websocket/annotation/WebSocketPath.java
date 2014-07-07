@@ -23,8 +23,6 @@ import java.lang.annotation.Target;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.RetentionPolicy;
 
-;
-
 /**
  * Annotation that mimics the base functions of {@link javax.ws.rs.Path}.
  * 
