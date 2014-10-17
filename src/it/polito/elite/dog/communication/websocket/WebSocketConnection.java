@@ -373,7 +373,7 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		{
 			// now we scroll trough all available methods looking for the
 			// annotations present
-			// if there are both "/api/v1/devides/status" and
+			// if there are both "/api/v1/devices/status" and
 			// "/api/v1/devices/{device-id}" we have to take care to choose the
 			// right one
 			Method[] methods = clazz.getDeclaredMethods();
@@ -586,6 +586,10 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 								// registration
 								if ((clientId != null) && (!clientId.isEmpty()))
 								{
+									if (rightArguments.size() == rightMethod.getParameterAnnotations().length)
+									{
+										rightArguments.remove(rightArguments.size() - 1);
+									}
 									rightArguments.add(new String(clientId));
 								}
 								result = (String) rightMethod.invoke(wci.getWebSocketEndpoint(),
