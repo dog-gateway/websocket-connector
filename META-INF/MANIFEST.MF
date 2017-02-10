@@ -40,3 +40,4 @@ Service-Component: OSGI-INF/component.xml
 Export-Package: it.polito.elite.dog.communication.websocket.annotation;version="1.0.0",
  it.polito.elite.dog.communication.websocket.api;version="1.0.0",
  it.polito.elite.dog.communication.websocket.message;version="1.0.0"
+Bundle-ActivationPolicy: lazy
