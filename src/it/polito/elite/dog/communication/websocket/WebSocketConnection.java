@@ -17,6 +17,12 @@
  */
 package it.polito.elite.dog.communication.websocket;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
 import it.polito.elite.dog.communication.websocket.annotation.WebSocketPath;
 import it.polito.elite.dog.communication.websocket.info.WebSocketConnectorInfo;
 import it.polito.elite.dog.communication.websocket.message.Presentation;
@@ -41,11 +47,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 
-import org.codehaus.jackson.JsonGenerationException;
-import org.codehaus.jackson.map.JsonMappingException;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.SerializationConfig;
-import org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.log.LogService;
@@ -107,10 +108,10 @@ public class WebSocketConnection implements WebSocket.OnTextMessage
 		// initialize the instance-wide object mapper for JSON
 		this.mapper = new ObjectMapper();
 		// set the mapper pretty printing
-		this.mapper.enable(SerializationConfig.Feature.INDENT_OUTPUT);
+		this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
 		// avoid empty arrays and null values
-		this.mapper.configure(SerializationConfig.Feature.WRITE_EMPTY_JSON_ARRAYS, false);
-		this.mapper.setSerializationInclusion(Inclusion.NON_NULL);
+		this.mapper.configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, false);
+		this.mapper.setSerializationInclusion(Include.NON_NULL);
 		
 		// init the logger
 		this.logger = new LogHelper(this.context);
