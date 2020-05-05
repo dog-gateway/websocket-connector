@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: it.polito.elite.dog.communication.websocket.connector
 Bundle-SymbolicName: it.polito.elite.dog.communication.websocket.connector
-Bundle-Version: 1.0.1
+Bundle-Version: 1.1.0
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: com.fasterxml.jackson.annotation;version="2.9.8",
  com.fasterxml.jackson.core;version="2.9.8",
